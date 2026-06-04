@@ -3,33 +3,33 @@ name: prompt-builder
 description: Architect-grade prompt engineer that builds production-ready Claude Code prompts by profiling the user, analyzing the codebase, and applying Claude Code Architecture certified patterns. Use when user wants a professional prompt, needs to delegate a task to another AI agent, or says "prompt builder", "cursor prompt", "agent prompt", "professional prompt", "claude prompt".
 ---
 
-# Claude Prompt Architect
+# Prompt Builder
 
 ## Quick start
 
 User says: *"auksiyon timer-i duzelt"*  
-Skill output: User profile + Codebase profile → Architect-certified Claude Code prompt ready to paste into another session.
+Your output: User profile → Codebase profile → Execution plan with checkboxes → Paste-ready prompt → Metadata card.
 
-## Workflow
+## Workflow (5 phases — execute in order)
 
-### Phase 1 — User Profiling (Know the Engineer)
+### Phase 1 — User Profiling
 
-Build a **User Profile** before writing any prompt:
+Detect user signals before writing anything:
 
-1. **Language & Style**: Preferred language, direct vs diplomatic, bullets vs prose.
-2. **Tech Stack DNA**: Primary stack, ORM, state management, UI kit, testing approach.
-3. **Architecture Bias**: Monolith vs microservices, DDD vs pragmatic, type strictness.
-4. **Quality Bar**: Test coverage expectation, lint strictness, documentation discipline.
-5. **Workflow Preference**: Execution-first vs plan-first, TDD vs test-after, incremental vs big-bang.
-6. **Anti-patterns**: What the user HATES (e.g., `any`, magic strings, god classes).
+1. **Language & Style**: Read `AGENTS.md` for language preference. Check conversation tone.
+2. **Tech Stack DNA**: Read `package.json` / `build.gradle` for frameworks, ORM, UI kit.
+3. **Architecture Bias**: Check source tree — layered? feature-based? DDD?
+4. **Quality Bar**: Check `tsconfig.json` strictness, test coverage, linter config.
+5. **Workflow**: Check commit style, review preference, risk tolerance.
+6. **Anti-patterns**: Scan code for `any`, magic strings, god classes.
 
-How: Read `AGENTS.md`, `CLAUDE.md`, commit messages, review style.
+**How**: Spawn 1–2 `Agent(subagent_type="explore")` to scan `AGENTS.md`, root configs, recent commits in parallel.
 
-### Phase 2 — Codebase Profiling (Know the Terrain)
+### Phase 2 — Codebase Profiling
 
-Build a **Codebase Profile**:
+Map the terrain:
 
-1. **Architecture Pattern**: Layered, hexagonal, feature-based? Entry points?
+1. **Architecture Pattern**: Entry points, layer boundaries, module ownership.
 2. **Tech Inventory**: Language/framework versions, key dependencies.
 3. **Conventions**: Naming, file organization, import patterns.
 4. **State & Data Flow**: Where state lives, API patterns, caching.
@@ -37,11 +37,11 @@ Build a **Codebase Profile**:
 6. **Integration Points**: External APIs, DB, brokers, auth.
 7. **Known Issues**: Tech debt, FIXMEs, flaky tests.
 
-How: `Agent(subagent_type="explore")` parallel scans of source, configs, tests.
+**How**: Spawn `Agent(subagent_type="explore")` parallel scans of `src/`, tests, configs. Summarize in 5 bullets.
 
 ### Phase 3 — Task Decomposition
 
-Break request into **atomic sub-tasks**:
+Break request into atomic sub-tasks:
 - Each independently verifiable.
 - Identify dependencies (what blocks what).
 - Mark critical path vs parallelizable.
@@ -49,13 +49,13 @@ Break request into **atomic sub-tasks**:
 
 ### Phase 4 — Prompt Architecture (CCAP)
 
-Build using **Claude Code Architecture Patterns**:
+Build using 5 certified patterns:
 
 1. **System Contract**: Role, expertise level, decision authority.
 2. **Context Window**: High-signal only. Summaries > dumps. Paths > contents.
 3. **Tool Directives**: When tools may run, when to ask permission, output schemas.
 4. **Acceptance Gates**: Done criteria, test expectations, rollback conditions.
-5. **Output Schema**: Structured output (JSON, tables, checklists).
+5. **Output Schema**: Structured output (tables, checklists).
 
 ### Phase 5 — Prompt Assembly & Polish
 
@@ -67,32 +67,31 @@ Role & Authority → Mission → Context → Sub-tasks → Constraints
 
 Polish: remove ambiguity, quantify, fence scope, add "Stop and Ask" for irreversible ops.
 
-## Output
+## Output Format (deliver in this order)
 
-Deliver:
-1. **Execution Plan (Todos)** — checkbox list showing all sub-tasks:
-   ```markdown
-   ## [Task Title]
+### 1. Execution Plan (Todos)
 
-   - [ ] Sub-task 1 description → target
-   - [ ] Sub-task 2 description → target
-   - [ ] Sub-task 3 description → target
-   ```
-   Mark the first/next active task with ❄️ (e.g., `❄️ [ ] Active task`).
-   Wrap long lines naturally (no horizontal scrolling).
+Checkbox list of sub-tasks. Mark first active with ❄️:
 
-2. **Generated Prompt** — paste-ready prompt in code block.
+```
+## [Task Title]
 
-3. **Metadata Card** (Complexity, Context Size, Model, Parallel Agents, Skills, Risk, Rollback).
+- ❄️ [ ] Active sub-task → target
+- [ ] Next sub-task → target
+- [ ] Final sub-task → target
+```
 
-When generating the prompt itself, always include a **Todos** section inside the prompt so the executing agent can track progress checkbox-style.
+Wrap long lines naturally (max 80 chars per line).
+
+### 2. Generated Prompt
+
+Paste-ready prompt in fenced code block. Include a **Todos** section inside so the executing agent tracks progress checkbox-style.
+
+### 3. Metadata Card
+
+Table: Complexity | Context Size | Model | Parallel Agents | Skills | Risk | Rollback.
 
 ## Advanced
 
 See [REFERENCE.md](REFERENCE.md) for:
-- CCAP deep dive (System Contract, Context Window, Tool Directives, Acceptance Gates, Output Schema)
-- Prompt templates by task type (Feature, Refactor, Bugfix, Security Audit)
-- User profiling checklist (20+ signals)
-- Codebase profiling checklist (by stack)
-- Anti-pattern catalog (prompt smells)
-- Before/after example with full generated prompt
+- CCAP deep dive, prompt templates by task type, user/codebase profiling checklists, anti-pattern catalog, before/after example.
