@@ -1,6 +1,6 @@
 {
   "name": "@vaqif14/prompt-builder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Architect-grade prompt engineer for Claude Code. Profiles users, analyzes codebases, and applies CCAP (Claude Code Architecture Patterns) to generate production-ready prompts.",
   "main": "src/index.js",
   "bin": {

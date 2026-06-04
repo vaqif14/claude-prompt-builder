@@ -412,3 +412,104 @@ For each sub-task:
 | **Skills Required** | frontend-patterns, ui-ux-pro-max |
 | **Risk Level** | Low |
 | **Rollback Strategy** | git revert + remove i18n keys |
+
+---
+
+## Agent Orchestration Mechanics
+
+### Agent Spawn Rules
+
+For each analysis domain, decide if an agent is needed:
+
+| Domain | When to Spawn | Skill to Load | Agent Type |
+|--------|---------------|---------------|------------|
+| UI/UX Design | User mentions design, layout, component | `ui-ux-pro-max` | explore |
+| Frontend Code | React/Next.js/Vue component work | `frontend-patterns` | explore |
+| Java Quality | Spring Boot code review | `java-code-review` | explore |
+| Security | Auth, validation, audit | `springboot-security` or `security-review` | explore |
+| Performance | Bundle size, query optimization | `frontend-patterns` or `springboot-patterns` | explore |
+| Database | Migrations, schema, queries | `database-migrations` or `jpa-patterns` | explore |
+| Testing | Test strategy, coverage | `springboot-tdd` or `e2e-testing` | explore |
+
+### Agent Prompt Template
+
+```
+You are a [domain] specialist agent. Your task: [specific sub-task].
+
+Context:
+- Project: [name and stack]
+- Relevant files: [file paths from codebase analysis]
+- Patterns to follow: [conventions from Phase 2]
+- User preferences: [from user profile]
+
+Skill to follow:
+Read [skill-name]/SKILL.md first and follow its workflow.
+
+Constraints:
+- [Boundary 1 from enriched prompt]
+- [Boundary 2 from enriched prompt]
+- Do NOT: [forbidden action 1]
+- Do NOT: [forbidden action 2]
+
+Output:
+[Structured format: bullet list, table, markdown]
+- SUMMARY: one-line outcome
+- FINDINGS: list of issues with file:line references
+- SEVERITY: Critical / High / Medium / Low per finding
+- RECOMMENDATIONS: concrete fix for each finding
+
+Return your findings as soon as complete. Do not ask clarifying questions.
+```
+
+### Discussion Checklist
+
+After collecting agent outputs, validate each:
+
+- [ ] **Reality check**: Does the finding match actual code? (Read the file to verify)
+- [ ] **Scope check**: Is the finding within the user's request scope?
+- [ ] **Severity accuracy**: Is Critical really critical? Would it block production?
+- [ ] **Conflict detection**: Do two agents disagree on the same file/line?
+- [ ] **Overlap detection**: Did two agents find the same issue? Deduplicate.
+
+If conflict detected:
+1. Read the disputed file yourself
+2. Decide which agent is correct based on codebase reality
+3. If unclear, spawn a follow-up agent with both viewpoints
+
+### Synthesis Patterns
+
+When merging agent outputs into unified analysis:
+
+1. **Deduplicate**: Same file mentioned by multiple agents → merge into single entry
+2. **Reconcile conflicts**: Different agents suggest different patterns → pick established codebase pattern
+3. **Fill gaps**: Agent missed edge case → add it natively
+4. **Priority sort**: Critical findings first, then High, Medium, Low
+5. **Cross-reference**: Link findings to matched skills for the final prompt
+
+### Parallel Agent Strategy
+
+For maximum efficiency, spawn agents concurrently when domains are independent:
+
+```
+# Example: parallel analysis for a page redesign
+Agent 1 (explore + ui-ux-pro-max): Analyze current design system usage, tokens, density
+Agent 2 (explore + frontend-patterns): Analyze component structure, state, data flow
+Agent 3 (explore + security-review): Check auth, input validation on the page
+Agent 4 (explore + e2e-testing): Analyze current test coverage for the page
+
+# Skill synthesizes all four outputs into final expert plan
+```
+
+### Agent-to-Agent Communication
+
+Agents are independent by default. Share output between agents ONLY when:
+- Agent B needs to know Agent A's findings to avoid duplication
+- One agent's output is input for another's task
+- Resolving a conflict requires both viewpoints
+
+Use this pattern:
+```
+Agent B prompt:
+  Context from Agent A: [summary of Agent A's key findings]
+  Your task: [build on or validate Agent A's findings]
+```

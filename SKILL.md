@@ -1,91 +1,82 @@
 ---
 name: prompt-builder
-description: Architect-grade prompt engineer that builds production-ready Claude Code prompts by profiling the user, analyzing the codebase, and applying Claude Code Architecture certified patterns. Use when user wants a professional prompt, needs to delegate a task to another AI agent, or says "prompt builder", "cursor prompt", "agent prompt", "professional prompt", "claude prompt".
+description: Expert-grade prompt architect that analyzes codebases at depth, orchestrates multi-agent discussions, discovers skills from local + GitHub, and builds CCAP-certified Claude Code prompts. Use when user wants a professional prompt, expert analysis, skill discovery, multi-agent plan, or says "prompt builder", "expert prompt", "agent prompt", "analyze and prompt".
 ---
 
 # Prompt Builder
 
 ## Quick start
 
-User says: *"auksiyon timer-i duzelt"*  
-Your output: User profile → Codebase profile → Execution plan with checkboxes → Paste-ready prompt → Metadata card.
+User says: *"bu səhifədə dizaynı update et"*  
+Your output: Full codebase scan → Spawn expert agents → Collect findings → Synthesize → Expert prompt → Metadata card.
 
-## Workflow (5 phases — execute in order)
+## Workflow (6 phases — execute in order)
 
-### Phase 1 — User Profiling
+### Phase 1 — Code-First Intent Clarification
 
-Detect user signals before writing anything:
+**Read the codebase FIRST. Then ask.**
 
-1. **Language & Style**: Read `AGENTS.md` for language preference. Check conversation tone.
-2. **Tech Stack DNA**: Read `package.json` / `build.gradle` for frameworks, ORM, UI kit.
-3. **Architecture Bias**: Check source tree — layered? feature-based? DDD?
-4. **Quality Bar**: Check `tsconfig.json` strictness, test coverage, linter config.
-5. **Workflow**: Check commit style, review preference, risk tolerance.
-6. **Anti-patterns**: Scan code for `any`, magic strings, god classes.
+1. **Scan**: `AGENTS.md`, `package.json`/`build.gradle`, `src/` structure, commits.
+2. **Understand the project**: Patterns, conventions, tech debt.
+3. **Detect ambiguities from CODE context** — not general assumptions.
+4. **Ask 0–2 questions ONLY about code-specific ambiguities**. General questions are forbidden.
+5. **If clear from context, proceed WITHOUT questions.**
 
-**How**: Spawn 1–2 `Agent(subagent_type="explore")` to scan `AGENTS.md`, root configs, recent commits in parallel.
+### Phase 2 — Expert Codebase Analysis
 
-### Phase 2 — Codebase Profiling
+Run diagnostics AND expert analysis:
 
-Map the terrain:
+1. **Build/Test scan**: Run actual build/tests. Record failures with file:line + exact error.
+2. **Code Quality**: Complexity, duplication, dead code, smells.
+3. **Security Audit**: Input validation, authZ, secrets, SQL/XSS, `npm audit`.
+4. **Role/Permission**: Admin vs user endpoints, RBAC, route guards.
+5. **Performance**: N+1 queries, bundle size, re-renders.
+6. **Test Coverage**: Untested files, flaky tests.
 
-1. **Architecture Pattern**: Entry points, layer boundaries, module ownership.
-2. **Tech Inventory**: Language/framework versions, key dependencies.
-3. **Conventions**: Naming, file organization, import patterns.
-4. **State & Data Flow**: Where state lives, API patterns, caching.
-5. **Testing Topology**: Unit/integration/E2E ratio, mock strategy.
-6. **Integration Points**: External APIs, DB, brokers, auth.
-7. **Known Issues**: Tech debt, FIXMEs, flaky tests.
+**How**: Spawn parallel `Agent(subagent_type="explore")` per domain. Read error logs.
 
-**How**: Spawn `Agent(subagent_type="explore")` parallel scans of `src/`, tests, configs. Summarize in 5 bullets.
+### Phase 2.5 — Agent Orchestration (Multi-Agent Discussion)
 
-### Phase 3 — Task Decomposition
+For each analysis domain, spawn a specialist agent:
 
-Break request into atomic sub-tasks:
-- Each independently verifiable.
-- Identify dependencies (what blocks what).
-- Mark critical path vs parallelizable.
-- Flag skill requirements per sub-task.
+1. **Match domain to skill**: See `data/agents.csv` for domain→skill mapping.
+2. **Spawn agent**: `Agent(subagent_type="explore")` with skill context.
+3. **Agent prompt**: Role + Task + Context + Skill + Constraints + Output format.
+4. **Discussion**: Read outputs. Validate against codebase. Reconcile conflicts.
+5. **Parallel strategy**: Spawn up to 4 agents concurrently. Wait for all before synthesis.
+
+### Phase 3 — Solution Design
+
+For EACH issue from Phase 2 / 2.5:
+
+1. Read failing file at exact line.
+2. Propose concrete fix with actual code change.
+3. Reference matched skill patterns.
+4. Verify minimal change, no regression.
+
+Rule: Never say "fix the error" — always say "change X to Y at file:line using [skill] pattern".
 
 ### Phase 4 — Prompt Architecture (CCAP)
 
-Build using 5 certified patterns:
-
-1. **System Contract**: Role, expertise level, decision authority.
-2. **Context Window**: High-signal only. Summaries > dumps. Paths > contents.
-3. **Tool Directives**: When tools may run, when to ask permission, output schemas.
-4. **Acceptance Gates**: Done criteria, test expectations, rollback conditions.
-5. **Output Schema**: Structured output (tables, checklists).
+Build using 5 certified patterns: System Contract, Context Window, Tool Directives, Acceptance Gates, Output Schema.
 
 ### Phase 5 — Prompt Assembly & Polish
 
-Assemble in order:
-```
-Role & Authority → Mission → Context → Sub-tasks → Constraints
-→ Tool Permissions → Acceptance Criteria → Output Format → Memory Files
-```
+Assemble: Role → Mission → Context → Matched Skills → Sub-tasks → Constraints → Tool Permissions → Acceptance Criteria → Output Format → Memory Files.
 
-Polish: remove ambiguity, quantify, fence scope, add "Stop and Ask" for irreversible ops.
+Polish: remove ambiguity, quantify, fence scope, add "Stop and Ask".
 
-## Output Format (deliver in this order)
+## Output Format
 
 ### 1. Execution Plan (Todos)
 
-Checkbox list of sub-tasks. Mark first active with ❄️:
-
-```
-## [Task Title]
-
-- ❄️ [ ] Active sub-task → target
-- [ ] Next sub-task → target
-- [ ] Final sub-task → target
-```
-
-Wrap long lines naturally (max 80 chars per line).
+Checkbox list. Mark first active with ❄️. Wrap lines at 80 chars.
 
 ### 2. Generated Prompt
 
-Paste-ready prompt in fenced code block. Include a **Todos** section inside so the executing agent tracks progress checkbox-style.
+Paste-ready prompt in code block. Include:
+- **Matched Skills** section (which agent handled which domain)
+- **Todos** section for progress tracking
 
 ### 3. Metadata Card
 
@@ -93,5 +84,4 @@ Table: Complexity | Context Size | Model | Parallel Agents | Skills | Risk | Rol
 
 ## Advanced
 
-See [REFERENCE.md](REFERENCE.md) for:
-- CCAP deep dive, prompt templates by task type, user/codebase profiling checklists, anti-pattern catalog, before/after example.
+See [REFERENCE.md](REFERENCE.md) for: CCAP deep dive, agent orchestration mechanics, agent prompt templates, discussion rules, synthesis patterns, skill discovery, GitHub search, anti-pattern catalog.

@@ -1,0 +1,12 @@
+domain,skill_name,agent_type,triggers,output_format
+ui-ux,ui-ux-pro-max,explore,design dizayn tasarim review layout component color typography style theme visual,design_audit_report
+frontend-code,frontend-patterns,explore,component refactor state hook api frontend react nextjs vue,component_analysis
+java-quality,java-code-review,explore,concurrency null safety exception java spring backend,quality_report
+security,springboot-security,explore,auth input validation secret cve security xss csrf,security_audit_report
+security-frontend,security-review,explore,xss csrf input sanitizer frontend security,security_audit_report
+performance,frontend-patterns,explore,bundle render re-render query performance optimize slow,performance_analysis
+performance-backend,springboot-patterns,explore,n-plus-one query cache slow performance backend,performance_analysis
+database,database-migrations,explore,migration schema flyway liquibase database sql db,schema_analysis
+testing-backend,springboot-tdd,explore,unit integration mock coverage test testing backend,test_analysis
+testing-frontend,e2e-testing,explore,e2e playwright cypress jest test testing frontend,test_analysis
+infrastructure,docker-patterns,explore,docker compose k8s nginx infra deploy infrastructure,infra_analysis
