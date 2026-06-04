@@ -29,7 +29,7 @@ function box(title, lines, color = 'cyan') {
 }
 
 function showHelp() {
-  box('prompt-builder v1.0.0', [
+  box('prompt-builder v1.2.0', [
     chalk.gray('Architect-grade prompt engineer for Claude Code'),
     '',
     chalk.white('Author:  ') + chalk.cyan('Vaqif Gulmammadov'),

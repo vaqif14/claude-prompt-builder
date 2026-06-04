@@ -8,7 +8,9 @@ description: Prompt engineer powered by agent harness architecture. Profiles use
 ## Quick start
 
 User says: *"bu səhifədə dizaynı update et"*  
-Harness: Register tools → Apply policies → Spawn agents → Collect → Normalize → Synthesize → Deliver expert prompt.
+Your output: Direct prompt generation → 0–1 clarifying question (only if task is ambiguous) → Paste-ready prompt + Execution plan + Metadata card.
+
+**Rule:** Never read files unless user explicitly asks for codebase analysis. Prompt-first always.
 
 ## Harness Components (7 layers — fully implemented)
 
@@ -106,36 +108,34 @@ const escalate = shouldEscalate('permission', 10, 0);
 
 ## Workflow
 
-### Phase 1 — Code-First Intent Clarification
+### Phase 1 — Prompt-First Intent Capture
 
-Read codebase first: `AGENTS.md`, `package.json`, `src/` structure. Ask 0–2 code-specific questions only. Proceed if clear.
+1. Parse user task for ambiguity (missing stack? missing scope? vague action?)
+2. If clear → skip to Phase 5 (Prompt Assembly)
+3. If ambiguous → ask **1 concise question** only, then proceed
+4. Never read files unless user says "analyze codebase" or "audit"
 
-### Phase 2 — Harness Initialization
+### Phase 2–4 — Conditional Deep Analysis (only when requested)
 
-1. Register tools: scan local skills, load schemas
-2. Load policies: apply guardrails from `AGENTS.md`
-3. Init state: create session with defaults
+If user says **"analyze codebase"**, **"audit"**, or **"deep dive"**:
+1. Initialize harness: register tools, load policies, init state
+2. Spawn parallel agents per domain (UI-UX, security, performance, etc.)
+3. Collect findings → validate → reconcile conflicts
+4. Design concrete fixes with exact file:line references
 
-### Phase 3 — Agent Orchestration
+If user gives a **straight task** (e.g., "add timer", "fix bug", "refactor"): skip to Phase 5.
 
-1. Decompose task into domains
-2. Spawn parallel agents: `Agent(subagent_type="explore")` per domain
-3. Apply PreToolUse: permission, scope, rate checks
-4. Collect findings: JSON objects, not prose
-5. Apply PostToolUse: normalize, optimize, update state
-6. Validate & reconcile: read files, resolve conflicts
-7. Aggregate: merge, deduplicate, sort by severity
+### Phase 5 — Prompt Assembly (CCAP)
 
-### Phase 4 — Solution Design
+Build prompt with these sections in order:
+1. **System Contract** — role, mission, authority level
+2. **Context Window** — stack, user profile, constraints
+3. **Tool Directives** — which tools allowed/blocked
+4. **Acceptance Gates** — definition of done
+5. **Output Schema** — expected format
+6. **Todos** — checkbox list for progress tracking
 
-For EACH issue: read exact file:line → propose concrete fix → reference skill patterns → verify minimal change.
-
-### Phase 5 — Prompt Assembly & Execution
-
-1. Build prompt: CCAP-certified (System Contract, Context Window, Tool Directives, Acceptance Gates, Output Schema)
-2. Run loop: execute until `end_turn` or safety valve
-3. Apply error handling: categorize, retry, escalate
-4. Normalize output: PostToolUse on final result
+Polish: remove ambiguity, quantify everything, fence scope, add "Stop and Ask" trigger.
 
 ## Output Format
 
