@@ -1,0 +1,7 @@
+category,key,value
+Stack,Scope,General software project
+Architecture,Pattern,Discover project structure before assuming framework
+Conventions,Changes,Keep changes scoped to requested task and existing patterns
+Testing,Required,Use available build test lint verification commands
+Skills,Required,find-skills verification-loop
+AntiPatterns,Do NOT assume web frontend when platform is unclear

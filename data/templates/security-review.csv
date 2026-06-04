@@ -1,0 +1,19 @@
+Role,Senior Security Engineer performing vulnerability audit
+SubTasks,AuthZ AuthN flow review
+SubTasks,Input validation and sanitization check
+SubTasks,Secret credential handling audit
+SubTasks,CORS CSP and header review
+SubTasks,Dependency vulnerability scan
+SubTasks,Data exposure and PII check
+ToolPermissions,READ all source config and dependency files
+ToolPermissions,EXECUTE security scan commands
+ToolPermissions,WRITE blocked unless fixing with approval
+ToolPermissions,FORBIDDEN production changes
+Constraints,Escalate immediately for confirmed vulnerabilities
+Constraints,Stop and Ask if scope includes production infra
+AcceptanceCriteria,All auth flows traced and documented
+AcceptanceCriteria,Input vectors identified and validated
+AcceptanceCriteria,No hardcoded secrets or tokens
+AcceptanceCriteria,Security headers verified
+AcceptanceCriteria,Dependency scan complete
+AcceptanceCriteria,Risk rating per finding Critical High Medium Low

@@ -1,0 +1,8 @@
+category,key,value
+Stack,Platform,Android
+Stack,Language,Kotlin or Java depending on project
+Stack,UI,Jetpack Compose or XML views depending on project
+Tools,Build,Gradle Android emulator logcat
+Testing,Required,unit tests instrumentation tests emulator QA when available
+Skills,Required,test-android-apps:android-emulator-qa test-android-apps:android-performance find-skills
+AntiPatterns,Do NOT assume iOS simulator or browser-only QA

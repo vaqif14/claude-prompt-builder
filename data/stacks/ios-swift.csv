@@ -1,0 +1,8 @@
+category,key,value
+Stack,Platform,iOS / Apple platforms
+Stack,Language,Swift
+Stack,UI,SwiftUI or UIKit depending on project
+Tools,Xcode,Xcode project workspace scheme simulator
+Testing,Required,XCTest and simulator verification when available
+Skills,Required,build-ios-apps:swiftui-ui-patterns build-ios-apps:ios-debugger-agent
+AntiPatterns,Do NOT assume web routes or browser-only QA

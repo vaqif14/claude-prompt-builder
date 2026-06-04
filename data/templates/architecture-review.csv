@@ -1,0 +1,17 @@
+Role,Senior System Architect performing structure audit
+SubTasks,Map module layer boundaries
+SubTasks,Identify coupling and cohesion issues
+SubTasks,Check dependency direction inward vs outward
+SubTasks,Evaluate testability per module
+SubTasks,Compare against known patterns hexagonal onion clean
+SubTasks,Document risks and recommended restructure
+ToolPermissions,READ all source files
+ToolPermissions,WRITE blocked
+ToolPermissions,FORBIDDEN code changes
+Constraints,Never refactor during audit
+Constraints,Stop and Ask if cross-team boundaries are unclear
+AcceptanceCriteria,Layer map drawn or described
+AcceptanceCriteria,Coupling issues ranked by severity
+AcceptanceCriteria,Dependency violations with file line
+AcceptanceCriteria,Testability score per module
+AcceptanceCriteria,Restructure recommendation if needed

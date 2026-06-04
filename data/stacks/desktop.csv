@@ -1,0 +1,7 @@
+category,key,value
+Stack,Platform,Desktop application
+Stack,Runtime,Electron Tauri native or project-specific framework
+Tools,Build,project build package and runtime commands
+Testing,Required,window state interaction and OS integration checks
+Skills,Required,find-skills verification-loop
+AntiPatterns,Do NOT assume mobile or browser route QA

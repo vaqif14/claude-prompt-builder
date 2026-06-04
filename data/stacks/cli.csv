@@ -1,0 +1,7 @@
+category,key,value
+Stack,Platform,CLI or developer tooling
+Stack,Runtime,Project-specific language and command runner
+Tools,UX,help text flags exit codes stdout stderr fixtures
+Testing,Required,command transcripts unit tests fixture tests
+Skills,Required,find-skills verification-loop
+AntiPatterns,Do NOT design GUI workflows for CLI-only tasks

@@ -1,9 +1,9 @@
 category,key,value
-Stack,Framework,Next.js 14 App Router
+Stack,Framework,Next.js App Router
 Stack,Language,TypeScript strict
 Stack,StateAdmin,TanStack Query
 Stack,StateBidder,Zustand
-Stack,UI,shadcn/ui + Material 3 tokens
+Stack,UI,MUI v7 + shadcn primitives + CSS variables
 Stack,Realtime,STOMP WebSocket
 Architecture,Pattern,Feature-based slices
 Architecture,Routing,App Router with i18n
@@ -11,8 +11,9 @@ Architecture,State,Zustand owns bidder real-time state
 Conventions,Components,strict TypeScript no any
 Conventions,Imports,absolute paths via tsconfig
 Conventions,i18n,translations added to messages files
-Testing,Unit,Jest
+Testing,Unit,project package scripts
 Testing,E2E,Playwright
-Skills,Required,frontend-patterns ui-ux-pro-max
+Skills,Required,frontend-patterns ui-ux-pro-max enterprise-ui-architect
+AntiPatterns,Use Vuexy only as visual composition reference
 AntiPatterns,Do NOT add Vuexy Vuetify npm dependency
 AntiPatterns,Do NOT duplicate API clients

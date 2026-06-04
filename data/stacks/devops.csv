@@ -1,0 +1,7 @@
+category,key,value
+Stack,Platform,DevOps / deployment / CI-CD
+Stack,Core,build pipeline environment variables deployment target rollback
+Tools,Verification,logs health checks smoke tests CI status
+Testing,Required,build deploy dry-run smoke verification when safe
+Skills,Required,docker-patterns deploy-to-vercel vercel:deployments-cicd verification-loop
+AntiPatterns,Do NOT run production deploys or destructive infra commands without explicit approval

@@ -1,0 +1,8 @@
+category,key,value
+Stack,Platform,Flutter cross-platform
+Stack,Language,Dart
+Stack,UI,Flutter widgets
+Tools,Build,flutter analyze flutter test device or emulator
+Testing,Required,widget tests and runtime screenshots when available
+Skills,Required,find-skills ui-ux-pro-max verification-loop
+AntiPatterns,Do NOT rewrite platform-specific native code unless required

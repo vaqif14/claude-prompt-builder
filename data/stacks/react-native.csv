@@ -1,0 +1,8 @@
+category,key,value
+Stack,Platform,React Native / Expo
+Stack,Language,TypeScript or JavaScript
+Stack,UI,Native components and platform-specific behavior
+Tools,Build,Metro Expo native simulators or emulators
+Testing,Required,unit tests and device/emulator QA when available
+Skills,Required,find-skills ui-ux-pro-max verification-loop
+AntiPatterns,Do NOT assume web DOM-only behavior

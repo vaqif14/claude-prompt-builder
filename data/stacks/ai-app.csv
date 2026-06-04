@@ -1,0 +1,7 @@
+category,key,value
+Stack,Platform,AI / LLM / RAG / agent application
+Stack,Core,model calls prompts tools memory retrieval persistence
+Tools,Docs,official API docs model/provider references eval fixtures
+Testing,Required,eval cases safety checks cost and persistence verification
+Skills,Required,openai-docs vercel:ai-sdk find-skills verification-loop
+AntiPatterns,Do NOT invent API behavior without checking official docs
