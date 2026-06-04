@@ -1,6 +1,6 @@
 {
   "name": "@vaqif14/prompt-builder",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Architect-grade prompt engineer for Claude Code. Profiles users, analyzes codebases, and applies CCAP (Claude Code Architecture Patterns) to generate production-ready prompts.",
   "main": "src/index.js",
   "bin": {
@@ -10,7 +10,14 @@
     "build": "node scripts/build.js",
     "search": "node scripts/search.js",
     "validate": "node scripts/validate.js",
-    "test": "node scripts/validate.js"
+    "test": "node scripts/validate.js",
+    "harness": "node scripts/harness.js",
+    "tools": "node scripts/tool-registry.js",
+    "safety": "node scripts/safety-monitor.js",
+    "state": "node scripts/state-manager.js",
+    "policy": "node scripts/policy-engine.js",
+    "error": "node scripts/error-handler.js",
+    "orchestrate": "node scripts/orchestrate.js"
   },
   "keywords": [
     "claude",
@@ -38,7 +45,8 @@
     "scripts/",
     "data/",
     "SKILL.md",
-    "REFERENCE.md"
+    "REFERENCE.md",
+    "QUICKREF.md"
   ],
   "engines": {
     "node": ">=16.0.0"
