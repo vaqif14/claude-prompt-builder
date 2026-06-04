@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,Postgres schema with Row Level Security
+Schema,RLS,Enable RLS on all tables with policies
+Schema,Types,Postgres native types enums
+Schema,Migrations,Supabase CLI migrations
+Query,Optimization,Indexes on foreign keys and search columns
+Query,Edge,Supabase Edge Functions for serverless logic
+Query,Params,Always parameterized via client library
+Security,Auth,Supabase Auth with JWT policies
+Security,Access,RLS policies for every CRUD operation
+Evidence,Commands,supabase db diff supabase db push
+Evidence,Runtime,Supabase logs edge function metrics

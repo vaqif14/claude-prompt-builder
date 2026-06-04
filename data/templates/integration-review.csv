@@ -1,0 +1,21 @@
+group,key,value
+Role,Senior Integration Engineer reviewing cross-system contracts
+SubTasks,Map all integration points APIs webhooks events
+SubTasks,Review contract compatibility between systems
+SubTasks,Check error handling and retry strategies
+SubTasks,Verify idempotency for critical operations
+SubTasks,Review timeout and circuit breaker configuration
+SubTasks,Check logging and tracing across service boundaries
+SubTasks,Document failure scenarios and fallback behavior
+ToolPermissions,READ all service configs and integration code
+ToolPermissions,EXECUTE integration tests
+ToolPermissions,WRITE blocked
+ToolPermissions,FORBIDDEN production changes
+Constraints,Never assume external API behavior is stable
+Constraints,Stop and Ask if integration test env is unavailable
+AcceptanceCriteria,All integration points documented
+AcceptanceCriteria,Contracts are versioned and backward compatible
+AcceptanceCriteria,Retry and circuit breaker configured
+AcceptanceCriteria,Idempotency tokens used where required
+AcceptanceCriteria,Distributed tracing covers critical paths
+AcceptanceCriteria,Fallback behavior documented for each integration

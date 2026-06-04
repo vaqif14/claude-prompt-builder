@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,Layered routes → controllers → services → models
+Architecture,Routing,Express Router with resource-based route files
+Architecture,Middleware,Auth validation error-handling logging
+Testing,Unit,Jest + Supertest for HTTP endpoints
+Testing,Integration,DB cleanup between tests with testcontainers
+Testing,E2E,Playwright or Cypress for full flows
+API,REST,Resource-based URLs plural nouns HTTP methods
+API,Validation,Joi or Zod for request/response schemas
+API,Documentation,Swagger/OpenAPI auto-generated from routes
+API,Versioning,/v1/ prefix or Accept-Version header
+Security,Auth,Passport.js or custom JWT middleware
+Security,Input,sanitize-html helmet express-rate-limit
+Security,CORS,Whitelist origins never allow *
+Database,ORM,Prisma or Sequelize or TypeORM
+Database,Migrations,Prisma migrate or db-migrate
+Database,Connection,Pool size env-driven never hardcode credentials
+Evidence,Commands,npm test npm run lint npm run build
+Evidence,Runtime,PM2 logs or Docker container health checks

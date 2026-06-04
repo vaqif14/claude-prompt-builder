@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,Entity classes with annotations
+Schema,Relations,OneToMany ManyToOne ManyToMany with FetchType
+Schema,Indexes,@Index @Table indexes
+Schema,Migrations,Flyway or Liquibase for version control
+Query,Optimization,JPQL or Criteria API avoid N+1
+Query,Raw,Native queries parameterized only
+Query,N+1,Use EntityGraph or JOIN FETCH
+Security,Access,Datasource from application.yml env
+Security,Validation,Bean Validation on entities
+Evidence,Commands,Flyway migrate or Liquibase update
+Evidence,Runtime,Hibernate statistics slow query log

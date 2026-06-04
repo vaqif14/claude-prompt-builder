@@ -14,7 +14,7 @@ function parseRows(file) {
     .filter(line => line.trim());
 
   // Smart header detection: skip if first line looks like a header
-  if (lines.length > 0 && /^(section|group|domain|key),/i.test(lines[0])) {
+  if (lines.length > 0 && /^(section|group|domain|category|key),/i.test(lines[0])) {
     lines.shift();
   }
 
@@ -66,7 +66,7 @@ function generatePrompt(task, options = {}) {
 
   const mode = inferMode(task, options.mode);
   const template = options.template || mode;
-  const stack = detectStack(task);
+  const stack = options.stack || detectStack(task);
   const platforms = detectPlatformsMixed(task);
   const analysis = analyzeTask(task);
   const modeConfig = getModeConfig(mode);

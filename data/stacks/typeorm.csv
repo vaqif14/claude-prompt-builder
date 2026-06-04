@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,Entity decorators as schema definition
+Schema,Relations,@OneToMany @ManyToOne @JoinColumn
+Schema,Indexes,@Index @Unique decorators
+Schema,Migrations,TypeORM migrations CLI
+Query,Optimization,QueryBuilder for complex queries
+Query,Raw,Raw queries parameterized only
+Query,N+1,Use relations or batch loading
+Security,Access,Connection from TypeORM config env-driven
+Security,Validation,Class-validator decorators on DTOs
+Evidence,Commands,typeorm migration:run typeorm schema:sync
+Evidence,Runtime,Query logging with slow query detection

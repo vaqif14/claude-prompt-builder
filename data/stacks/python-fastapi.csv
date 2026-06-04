@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,Router → Service → Repository/Model
+Architecture,DI,Depends for shared dependencies DB session settings
+Architecture,Async,Async endpoints with async DB drivers
+Testing,Unit,pytest with httpx.AsyncClient for endpoints
+Testing,Integration,TestClient with SQLite in-memory or testcontainers
+Testing,E2E,Playwright for full user flows
+API,REST,Resource routers Pydantic models for request/response
+API,Validation,Pydantic BaseModel with Field constraints
+API,Documentation,Auto-generated OpenAPI at /docs and /redoc
+API,Versioning,APIRouter prefix /v1/ or header-based
+Security,Auth,OAuth2PasswordBearer with JWT tokens
+Security,Input,Depends(get_current_user) for protected routes
+Security,CORS, CORSMiddleware with explicit origins
+Database,ORM,SQLAlchemy 2.0 with async session or TortoiseORM
+Database,Migrations,Alembic with auto-generate revision
+Database,Connection,Settings-driven URL from env
+Evidence,Commands,pytest mypy ruff black
+Evidence,Runtime,uvicorn logs structured logging

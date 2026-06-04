@@ -1,0 +1,13 @@
+group,key,value
+Schema,Design,InnoDB engine UTF-8 collation
+Schema,Types,Appropriate INT VARCHAR DECIMAL TEXT
+Schema,Indexes,PRIMARY KEY + foreign keys + search indexes
+Schema,Migrations,Version-controlled incremental migrations
+Query,Optimization,EXPLAIN for query plans
+Query,Joins,Prefer JOINs over nested queries
+Query,Params,Always parameterized queries
+Query,Transactions,Use transactions for multi-table ops
+Security,Access,Separate app user from root
+Security,Backup,mysqldump with automated scheduling
+Evidence,Commands,mysqldump mysqlshow mysql
+Evidence,Runtime,Slow query log performance schema

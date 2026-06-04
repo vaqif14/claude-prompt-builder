@@ -1,0 +1,22 @@
+group,key,value
+Role,Senior Backend Engineer performing a backend audit
+SubTasks,Map route controller service repository boundaries
+SubTasks,Check API contracts and response consistency
+SubTasks,Verify auth authorization and input validation
+SubTasks,Review database queries for N+1 and slow paths
+SubTasks,Check error handling and logging strategy
+SubTasks,Run tests and verify coverage for critical paths
+SubTasks,Review security headers and CORS configuration
+SubTasks,Return verdict with file line evidence
+ToolPermissions,READ all backend source config and env files
+ToolPermissions,EXECUTE test lint build commands
+ToolPermissions,WRITE blocked unless fixing with approval
+ToolPermissions,FORBIDDEN production deploy
+Constraints,Never modify files without test verification
+Constraints,Stop and Ask if auth credentials are needed for testing
+AcceptanceCriteria,All routes mapped with HTTP methods
+AcceptanceCriteria,Auth flows traced and documented
+AcceptanceCriteria,No unhandled exceptions in critical paths
+AcceptanceCriteria,Database queries have EXPLAIN evidence
+AcceptanceCriteria,Test coverage reported for audited modules
+AcceptanceCriteria,Verdict Working Working with issues Blocked Not working

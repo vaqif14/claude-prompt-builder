@@ -15,9 +15,44 @@ const PLATFORM_REGISTRY = [
   {
     id: 'backend',
     label: 'Backend / API',
-    keywords: /backend|api|server|spring|java|node|express|nestjs|fastapi|django|flask|controller|service|repository|database|postgres|sql|graphql|rest/,
+    keywords: /backend|api|server|spring|java|controller|service|repository|database|sql|graphql|rest/,
     defaultSkills: ['api-design', 'springboot-patterns', 'postgres-patterns', 'database-migrations', 'security-review', 'verification-loop'],
     evidence: 'endpoint contracts, service flow, database/schema impact, unit/integration tests, security checks',
+  },
+  {
+    id: 'node-express',
+    label: 'Node.js / Express',
+    keywords: /\bexpress\b|\bnode\b|\bnodejs\b/,
+    defaultSkills: ['find-skills'],
+    evidence: 'route handlers, middleware chain, Jest/Supertest, PM2/Docker runtime',
+  },
+  {
+    id: 'nestjs',
+    label: 'NestJS',
+    keywords: /\bnestjs\b/,
+    defaultSkills: ['find-skills'],
+    evidence: 'module structure, decorators, DI container, Jest testing, Swagger docs',
+  },
+  {
+    id: 'python-fastapi',
+    label: 'Python / FastAPI',
+    keywords: /\bfastapi\b/,
+    defaultSkills: ['find-skills'],
+    evidence: 'async handlers, Pydantic models, Alembic migrations, pytest, OpenAPI docs',
+  },
+  {
+    id: 'python-django',
+    label: 'Python / Django',
+    keywords: /\bdjango\b/,
+    defaultSkills: ['find-skills'],
+    evidence: 'MVT structure, DRF serializers, migrations, pytest-django, admin panel',
+  },
+  {
+    id: 'ruby-rails',
+    label: 'Ruby / Rails',
+    keywords: /\brails\b|\bruby\b/,
+    defaultSkills: ['find-skills'],
+    evidence: 'MVC structure, Active Record, RSpec, migrations, Rails logs',
   },
   {
     id: 'ios',
@@ -185,14 +220,42 @@ function detectPlatformsMixed(task) {
 function detectStack(task) {
   const lower = task.toLowerCase();
   // Specific stacks first — use word boundaries for short tokens to avoid false positives
-  if (/\blaravel\b|\bphp\b/.test(lower)) return 'laravel';
-  if (/\bpython\b|\bfastapi\b|\bdjango\b|\bflask\b/.test(lower)) return 'python';
+
+  // Database stacks (detect before generic backend)
+  if (/\bsupabase\b/.test(lower)) return 'supabase';
+  if (/\bfirebase\b/.test(lower)) return 'firebase';
+  if (/\bprisma\b/.test(lower)) return 'prisma';
+  if (/\btypeorm\b/.test(lower)) return 'typeorm';
+  if (/\bjpa\b|\bhibernate\b/.test(lower)) return 'jpa-hibernate';
+  if (/\bpostgresql\b|\bpostgres\b/.test(lower)) return 'postgres';
+  if (/\bmysql\b/.test(lower)) return 'mysql';
+  if (/\bmongodb\b|\bmongo\b/.test(lower)) return 'mongodb';
+  if (/\bredis\b/.test(lower)) return 'redis';
+
+  // Python stacks
+  if (/\bfastapi\b/.test(lower)) return 'python-fastapi';
+  if (/\bdjango\b/.test(lower)) return 'python-django';
+  if (/\bflask\b/.test(lower)) return 'python';
+  if (/\bpython\b/.test(lower)) return 'python';
+
+  // Node.js stacks
+  if (/\bnestjs\b/.test(lower)) return 'nestjs';
+  if (/\bexpress\b/.test(lower)) return 'node-express';
+  if (/\bnode\b|\bnodejs\b/.test(lower)) return 'node-express';
+
+  // Other backend stacks
+  if (/\blaravel\b/.test(lower)) return 'laravel';
+  if (/\bphp\b/.test(lower)) return 'laravel';
+  if (/\brails\b/.test(lower)) return 'ruby-rails';
+  if (/\bruby\b/.test(lower)) return 'ruby-rails';
+  if (/\bspring\b|\bjava\b|\bgradle\b/.test(lower)) return 'spring-boot';
   if (/\bgolang\b|\bgo\b\s+module|\bgin\b|\becho\b|\bfiber\b/.test(lower)) return 'go';
   if (/\brust\b|\bcargo\b|\bactix\b|\btokio\b|\baxum\b/.test(lower)) return 'rust';
   if (/\.net|\bc#\b|\basp\.net\b|\bef\s+core\b|\bblazor\b/.test(lower)) return 'dotnet';
+
+  // Other stacks
   if (/\bunity\b|\bgame\s+dev\b|\bunreal\b|\bgodot\b/.test(lower)) return 'unity';
   if (/\bdata\s+pipeline\b|\bml\b|\bpytorch\b|\btensorflow\b|\bpandas\b/.test(lower)) return 'data-ml';
-  if (/\bpostgresql\b|\bmongo\b|\bredis\b|\belasticsearch\b|\bprisma\b|\bdrizzle\b/.test(lower)) return 'db';
   if (/\bios\b|\bswift\b|\bswiftui\b|\bxcode\b|\biphone\b|\bipad\b|\bvisionos\b|\bwatchos\b|\bmacos\b/.test(lower)) return 'ios-swift';
   if (/\bandroid\b|\bkotlin\b|\bjetpack\b|\bcompose\b|\bapk\b|\bemulator\b/.test(lower)) return 'android-kotlin';
   if (/\bflutter\b|\bdart\b/.test(lower)) return 'flutter';
@@ -201,8 +264,8 @@ function detectStack(task) {
   if (/\bdesktop\b|\belectron\b|\btauri\b|\bnative\s+app\b/.test(lower)) return 'desktop';
   if (/\bai\b|\bllm\b|\brag\b|\bagent\b|\bopenai\b|\bmodel\b|\bembedding\b|\bvector\b/.test(lower)) return 'ai-app';
   if (/\bdocker\b|\bdeploy\b|\bvercel\b|\bci\/cd\b|\bpipeline\b|\bkubernetes\b|\binfra\b|\bdevops\b/.test(lower)) return 'devops';
-  if (/\bspring\b|\bjava\b|\bgradle\b|\bbackend\b/.test(lower)) return 'spring-boot';
   if (/\breact\b|\bnext\b|\btsx\b|\bfrontend\b|\bshadcn\b|\bmui\b|\bdashboard\b|\badmin\b|\bpage\b|\bcomponent\b|\bcard\b/.test(lower)) return 'nextjs';
+  if (/\bbackend\b|\bapi\b|\bserver\b/.test(lower)) return 'spring-boot';
   return 'general';
 }
 

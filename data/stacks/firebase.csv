@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,NoSQL document collections with denormalization
+Schema,Rules,Security rules for every collection
+Schema,Types,Field types with validation in rules
+Schema,Migrations,No formal migrations plan for schema changes
+Query,Optimization,Composite indexes for compound queries
+Query,Batch,Batch writes for atomic operations
+Query,Params,Always validate input in security rules
+Security,Auth,Firebase Auth with custom claims
+Security,Rules,Allow only authenticated users with ownership
+Evidence,Commands,firebase deploy firebase emulators:start
+Evidence,Runtime,Firebase logs Cloud Functions metrics

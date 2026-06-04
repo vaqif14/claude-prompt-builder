@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,MVC with fat models skinny controllers
+Architecture,Project,App-based with models controllers views mailers jobs
+Architecture,Concerns,Shared logic in models and controllers concerns
+Testing,Unit,RSpec with FactoryBot and Shoulda Matchers
+Testing,Integration,Request specs with Capybara for full flows
+Testing,E2E,System specs with Selenium or Playwright
+API,REST,Resource routes serializers active_model_serializers or jbuilder
+API,Validation,Model validations with custom validators
+API,Documentation,rswag for OpenAPI generation
+API,Versioning,URL prefix /v1/ or Accept header
+Security,Auth,Devise or JWT with doorkeeper
+Security,Input,Strong parameters parameterized queries
+Security,CSRF,Enabled for HTML APIs use API mode
+Database,ORM,Active Record with migrations
+Database,Migrations,rails db:migrate db:rollback
+Database,Connection,Database.yml env-driven pool size
+Evidence,Commands,rspec rubocop rails test
+Evidence,Runtime,Rails logs structured logging with Lograge

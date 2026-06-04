@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,Axum/Actix handler → service → repository with traits
+Architecture,Project,Cargo workspace for multi-crate projects
+Architecture,Async,Tokio runtime with async/await
+Testing,Unit,cargo test with mockall for trait mocking
+Testing,Integration,sqlx test macros or testcontainers
+Testing,Benchmark,criterion.rs for performance benchmarks
+API,REST,Axum or Actix-web with extractors and responders
+API,Validation,validator crate or custom FromRequest validation
+API,Documentation,utoipa for OpenAPI generation
+API,Versioning,URL prefix /v1/ or Accept header
+Security,Auth,jsonwebtoken or oauth2 crates
+Security,Input,Parameterized queries with sqlx never string interpolation
+Security,Headers,tower-http security headers middleware
+Database,ORM,sqlx or diesel or sea-orm
+Database,Migrations,sqlx migrate or diesel migration
+Database,Connection,Deadpool or bb8 connection pool env-driven
+Evidence,Commands,cargo test cargo clippy cargo build
+Evidence,Runtime,tracing structured logs tokio-console for async

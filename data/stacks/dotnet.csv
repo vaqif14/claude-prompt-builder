@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,Controller → Service → Repository with DI
+Architecture,Project,Solution-based with projects for API Core Infrastructure
+Architecture,DI,Microsoft.Extensions.DependencyInjection
+Testing,Unit,xUnit with Moq or NSubstitute
+Testing,Integration,WebApplicationFactory with TestServer
+Testing,E2E,Playwright for full flows
+API,REST,Minimal APIs or Controllers with route attributes
+API,Validation,FluentValidation or Data Annotations
+API,Documentation,Swashbuckle for OpenAPI generation
+API,Versioning,Microsoft.AspNetCore.Mvc.Versioning
+Security,Auth,ASP.NET Core Identity or JWT Bearer
+Security,Input,ModelState validation parameterized EF queries
+Security,CORS,Explicit origins in appsettings
+Database,ORM,Entity Framework Core with migrations
+Database,Migrations,dotnet ef migrations add/update
+Database,Connection,Connection string from appsettings or env
+Evidence,Commands,dotnet test dotnet build dotnet format
+Evidence,Runtime,Application Insights Serilog structured logs

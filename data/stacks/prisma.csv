@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,Prisma schema as single source of truth
+Schema,Relations,Explicit @relation with referential actions
+Schema,Indexes,@index @unique for performance
+Schema,Migrations,Prisma Migrate with shadow database
+Query,Optimization,Select specific fields avoid SELECT *
+Query,Raw,Raw queries only when necessary parameterized
+Query,N+1,Use include or data loader pattern
+Security,Access,Connection string from env never committed
+Security,Validation,@db.VarChar limits enum constraints
+Evidence,Commands,prisma migrate dev prisma generate prisma studio
+Evidence,Runtime,Query logging with duration metrics

@@ -1,0 +1,20 @@
+group,key,value
+Architecture,Pattern,Module → Controller → Service → Repository/Entity
+Architecture,DI,Constructor injection only no manual instantiation
+Architecture,Decorators,@Controller @Get @Post @Body @Param @Query
+Testing,Unit,Jest built-in with @nestjs/testing Test.createTestingModule
+Testing,Integration,Supertest with in-memory DB or testcontainers
+Testing,E2E,Playwright or full Nest E2E test suite
+API,REST,Resource controllers DTOs with class-validator
+API,GraphQL,@Resolver @Query @Mutation with codegen types
+API,Validation,class-validator + class-transformer pipe
+API,Documentation,Swagger via @nestjs/swagger decorators
+API,Versioning,@Version or URI prefix /v1/
+Security,Auth,Passport strategies JWT local OAuth2
+Security,Guards,@UseGuards for role-based access
+Security,Input,ValidationPipe whitelist transform true
+Database,ORM,TypeORM or Prisma or Sequelize
+Database,Migrations,TypeORM migrations or Prisma migrate
+Database,Connection,ConfigService-driven never hardcode
+Evidence,Commands,npm run test npm run lint npm run build
+Evidence,Runtime,NestJS health checks /health endpoint

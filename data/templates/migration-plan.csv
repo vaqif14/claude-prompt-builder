@@ -1,0 +1,22 @@
+group,key,value
+Role,Senior Engineer planning database or code migration
+SubTasks,Assess current state and target state
+SubTasks,Identify breaking changes and compatibility layers
+SubTasks,Design migration steps with rollback plan
+SubTasks,Estimate downtime and data volume impact
+SubTasks,Plan testing strategy for each migration step
+SubTasks,Document cutover and verification procedures
+SubTasks,Define rollback criteria and emergency procedures
+ToolPermissions,READ all schema code and config files
+ToolPermissions,WRITE migration scripts and documentation
+ToolPermissions,EXECUTE dry-run commands
+ToolPermissions,FORBIDDEN production migration without approval
+Constraints,Never run untested migration on production
+Constraints,Always have rollback plan before cutover
+Constraints,Stop and Ask if data loss risk is unacceptable
+AcceptanceCriteria,Current and target states documented
+AcceptanceCriteria,Migration steps are incremental and reversible
+AcceptanceCriteria,Downtime estimate is realistic
+AcceptanceCriteria,Testing covers happy path and rollback
+AcceptanceCriteria,Cutover procedure documented step by step
+AcceptanceCriteria,Emergency rollback criteria defined

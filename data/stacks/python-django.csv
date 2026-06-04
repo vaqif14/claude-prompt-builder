@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,App-based MVT or DRF for API
+Architecture,Apps,Each app has models views urls serializers tests
+Architecture,Middleware,Custom middleware for auth logging security
+Testing,Unit,pytest-django or Django TestCase
+Testing,Integration,APIClient for DRF endpoints
+Testing,E2E,Playwright or Selenium for full flows
+API,REST,Django REST Framework serializers viewsets routers
+API,Validation,Serializer validation with unique together constraints
+API,Documentation,DRF browsable API or drf-yasg Swagger
+API,Versioning,URL prefix /v1/ or Accept header
+Security,Auth,Django auth or dj-rest-auth JWT
+Security,Input,Django forms/serializers validation never raw SQL
+Security,CSRF,Enabled for forms exempt only for API tokens
+Database,ORM,Django ORM with migrations
+Database,Migrations,python manage.py makemigrations migrate
+Database,Admin,Django Admin for internal data management
+Evidence,Commands,python manage.py test python -m pytest
+Evidence,Runtime,Django logs Sentry for errors

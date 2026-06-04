@@ -1,0 +1,19 @@
+group,key,value
+Architecture,Pattern,Handler → Service → Repository with interfaces
+Architecture,Project,cmd/ internal/ pkg/ standard layout
+Architecture,DI,Interface-based injection manual wiring
+Testing,Unit,go test with testify/mock
+Testing,Integration,Testcontainers for DB docker-compose for services
+Testing,Benchmark,go test -bench for hot paths
+API,REST,chi or gin or echo router with middleware chain
+API,Validation,go-playground/validator or custom validation
+API,Documentation,swaggo/swag for OpenAPI generation
+API,Versioning,URL prefix /v1/ or custom header
+Security,Auth,JWT with golang-jwt/jwt or custom middleware
+Security,Input,Validation middleware sqlx parameterized queries
+Security,Headers,Security middleware CSRF CORS X-Frame-Options
+Database,ORM,sqlx or gorm or ent
+Database,Migrations,golang-migrate or atlas
+Database,Connection,Pool size env-driven connection string from env
+Evidence,Commands,go test go vet go build staticcheck
+Evidence,Runtime,pprof for profiling structured logs

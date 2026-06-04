@@ -1,0 +1,20 @@
+group,key,value
+Architecture,Pattern,Route → Controller → Service → Model/Eloquent
+Architecture,DI,Constructor injection with type-hinting
+Architecture,Requests,Form Request classes for validation
+Architecture,Resources,API Resources for response transformation
+Testing,Unit,PHPUnit with Mockery
+Testing,Integration,Feature tests with DatabaseTransactions
+Testing,E2E,Laravel Dusk or Playwright
+API,REST,Resource routes with API Resource controllers
+API,Validation,Form Request rules with custom messages
+API,Documentation,Scribe or Laravel OpenAPI
+API,Versioning,URL prefix /v1/ or Accept header
+Security,Auth,Laravel Sanctum or Passport for API tokens
+Security,Input,Form Request validation Eloquent mass assignment protection
+Security,CSRF,Enabled for web routes API routes use tokens
+Database,ORM,Eloquent with relationships and query scopes
+Database,Migrations,php artisan migrate with rollback testing
+Database,Connection,.env-driven config never commit credentials
+Evidence,Commands,php artisan test php artisan migrate:fresh --seed
+Evidence,Runtime,Laravel Telescope for debug structured logging

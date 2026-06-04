@@ -42,8 +42,8 @@ function analyzeTask(task) {
   if (/ai|llm|rag|agent|openai|model|embedding|vector/.test(lower)) {
     add('ai-app', 'openai-docs', 'high');
   }
-  if (/java|spring|boot|backend|api|controller|service|repository/.test(lower)) {
-    add('backend-code', 'springboot-patterns', 'high');
+  if (/java|spring|boot/.test(lower)) {
+    add('java-backend', 'springboot-patterns', 'high');
   }
   if (/laravel|php/.test(lower)) {
     add('php-backend', 'find-skills', 'high');
@@ -57,6 +57,21 @@ function analyzeTask(task) {
   if (/rust|cargo/.test(lower)) {
     add('rust-backend', 'find-skills', 'high');
   }
+  if (/express|node|nodejs/.test(lower)) {
+    add('node-backend', 'frontend-patterns', 'high');
+  }
+  if (/nestjs/.test(lower)) {
+    add('nestjs-backend', 'find-skills', 'high');
+  }
+  if (/\.net|c#|asp\.net/.test(lower)) {
+    add('dotnet-backend', 'find-skills', 'high');
+  }
+  if (/rails|ruby/.test(lower)) {
+    add('ruby-backend', 'find-skills', 'high');
+  }
+  if (/backend|api|server|controller|service|repository/.test(lower)) {
+    add('backend-code', 'springboot-patterns', 'high');
+  }
   if (/test|spec|jest|junit|mock|coverage|verify|confirm|working|qa/.test(lower)) {
     add('verification', 'verification-loop', 'high');
     add('browser-qa', 'browser-qa', 'high');
@@ -64,11 +79,17 @@ function analyzeTask(task) {
   if (/security|auth|jwt|cors|xss|sql|inject/.test(lower)) {
     add('security', 'springboot-security', 'high');
   }
-  if (/database|db|migration|schema|sql|postgres|mongo|redis|prisma/.test(lower)) {
+  if (/database|db|migration|schema|sql/.test(lower)) {
     add('database', 'database-migrations', 'medium');
   }
-  if (/performance|slow|optimize|cache|memory|cpu|lag|bundle/.test(lower)) {
+  if (/postgres|mysql|mongo|redis|prisma|typeorm|jpa|hibernate|supabase|firebase/.test(lower)) {
+    add('database-engine', 'postgres-patterns', 'medium');
+  }
+  if (/performance|slow|optimize|cache|memory|cpu|lag|bundle|latency|profile/.test(lower)) {
     add('performance', 'frontend-patterns', 'medium');
+  }
+  if (/microservice|grpc|kafka|rabbitmq|event|message|queue/.test(lower)) {
+    add('integration', 'api-design', 'medium');
   }
   if (/refactor|clean|debt|smell|extract|decouple/.test(lower)) {
     add('refactoring', 'java-code-review', 'medium');
@@ -290,6 +311,38 @@ function getAgentCouncil(task, mode) {
     );
   }
 
+  if (/backend|api|server|controller|service|repository|endpoint/.test(lower)) {
+    add(
+      'Backend/API Architect',
+      'Review endpoint design, service boundaries, data flow, and contract consistency.',
+      'API map, endpoint contracts, service layer findings, database query issues, and refactoring plan.'
+    );
+  }
+
+  if (/database|db|migration|schema|sql|postgres|mongo|redis|prisma|typeorm|jpa/.test(lower)) {
+    add(
+      'Database/Migration Agent',
+      'Review schema design, query performance, indexing, and migration safety.',
+      'ER map, slow query analysis, index recommendations, migration risk assessment.'
+    );
+  }
+
+  if (/microservice|grpc|kafka|rabbitmq|event|integration|webhook/.test(lower)) {
+    add(
+      'Integration/Test Agent',
+      'Review cross-service contracts, event flow, idempotency, and test coverage.',
+      'Integration map, contract compatibility, event flow diagram, test gap analysis.'
+    );
+  }
+
+  if (/devops|deploy|ci|cd|pipeline|docker|kubernetes|infra/.test(lower)) {
+    add(
+      'DevOps/Release Agent',
+      'Review deployment pipeline, env config, rollback, and observability.',
+      'Pipeline map, env risk, rollback plan, monitoring gaps, release checklist.'
+    );
+  }
+
   return agents;
 }
 
@@ -369,6 +422,21 @@ function getUniversalAgentRoster(task, mode, platforms = []) {
     }
     if (platform.id === 'db') {
       add('Database Agent', 'schema, migrations, query plans, indexing', 'Database tasks', 'DB findings and performance evidence');
+    }
+    if (platform.id === 'node-express') {
+      add('Node/Express Agent', 'routes, middleware, services, Express patterns', 'Node.js tasks', 'Express findings and test evidence');
+    }
+    if (platform.id === 'nestjs') {
+      add('NestJS Agent', 'modules, controllers, services, decorators, DI', 'NestJS tasks', 'NestJS structure findings and test evidence');
+    }
+    if (platform.id === 'python-fastapi') {
+      add('FastAPI Agent', 'async handlers, Pydantic, Alembic, pytest', 'FastAPI tasks', 'FastAPI findings and test evidence');
+    }
+    if (platform.id === 'python-django') {
+      add('Django Agent', 'MVT, DRF, migrations, admin, pytest-django', 'Django tasks', 'Django findings and test evidence');
+    }
+    if (platform.id === 'ruby-rails') {
+      add('Rails Agent', 'MVC, Active Record, RSpec, migrations, Sidekiq', 'Rails tasks', 'Rails findings and test evidence');
     }
   }
 

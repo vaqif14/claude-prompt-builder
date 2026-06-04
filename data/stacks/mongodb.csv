@@ -1,0 +1,12 @@
+group,key,value
+Schema,Design,Document-oriented embedded vs referenced decisions
+Schema,Types,ObjectId for _id ISO dates for timestamps
+Schema,Indexes,Compound indexes for common queries
+Schema,Migrations,Mongoose migrations or mongodb-migrate
+Query,Optimization,explain() for query plans
+Query,Aggregation,Pipeline stages efficient ordering
+Query,Params,Always validate input before queries
+Security,Access,Role-based access control RBAC
+Security,Backup,mongodump with automated scheduling
+Evidence,Commands,mongodump mongorestore mongosh
+Evidence,Runtime,db.currentOp() profiler logs

@@ -1,17 +1,20 @@
-category,key,value
-Stack,Framework,Spring Boot 3
-Stack,Build,Gradle
-Stack,Java,17+
-Stack,Database,PostgreSQL
-Architecture,Pattern,Layered Controller → Service → Repository
-Architecture,Validation,Jakarta annotations
-Architecture,DTOs,records where possible
-Architecture,Auth,Spring Security LDAP or Basic per profile
-Architecture,Audit,events written to PostgreSQL in same TX
-Architecture,Migrations,Flyway
-Testing,Unit,JUnit 5 Mockito
-Testing,Integration,MockMvc Testcontainers
-Testing,Load,Gatling
-Conventions,Naming,camelCase classes snake_case DB
-Conventions,Packages,com.company.module.layer
-Skills,Required,java-coding-standards springboot-patterns jpa-patterns
+group,key,value
+Architecture,Pattern,Layered Controller → Service → Repository with DTOs
+Architecture,DI,Constructor injection with @Autowired or final fields
+Architecture,Records,Use Java records for DTOs where possible
+Architecture,Validation,@Valid with Bean Validation on request DTOs
+Testing,Unit,JUnit 5 + Mockito with @ExtendWith(MockitoExtension)
+Testing,Integration,@SpringBootTest with @Testcontainers for DB
+Testing,E2E,RestAssured or TestRestTemplate for API flows
+API,REST,@RestController with @GetMapping @PostMapping etc
+API,DTO,Request/response DTOs separate from entities
+API,Documentation,SpringDoc OpenAPI annotations
+API,Versioning,URL prefix /v1/ or custom header
+Security,Auth,Spring Security with JWT or OAuth2
+Security,Input,@Valid validation parameterized JPA queries
+Security,Headers,SecurityFilterChain with explicit CORS
+Database,ORM,JPA/Hibernate with Spring Data JPA
+Database,Migrations,Flyway or Liquibase version-controlled
+Database,Connection,HikariCP pool env-driven never hardcode
+Evidence,Commands,./gradlew test ./gradlew bootRun
+Evidence,Runtime,Actuator health endpoints structured logging

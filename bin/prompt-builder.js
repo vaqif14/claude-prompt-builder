@@ -27,7 +27,7 @@ function box(title, lines, color = 'cyan') {
 }
 
 function showHelp() {
-  box('prompt-builder v1.4.0', [
+  box('prompt-builder v1.4.1', [
     chalk.gray('Universal agent orchestration planner for coding agents'),
     '',
     chalk.white('Author:  ') + chalk.cyan('Vaqif Gulmammadov'),
@@ -43,6 +43,9 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--json')} "${chalk.yellow('<task>')}"                               ${chalk.gray('# JSON output')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--save')} <file> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Save to file')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--print-skills-only')} "${chalk.yellow('<task>')}"                 ${chalk.gray('# Output matched skills')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--stack')} <stack> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override stack detection')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--backend')} "${chalk.yellow('<task>')}"                             ${chalk.gray('# Force backend context')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--database')} <db> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Force database context')}
 
 ${chalk.bold('Modes:')}
   ${chalk.yellow('feature')}            ${chalk.gray('Feature implementation (default)')}
@@ -112,6 +115,8 @@ function parseArgs(args) {
     validate: null,
     listModes: false,
     listStacks: false,
+    backend: false,
+    database: null,
     help: false,
   };
 
@@ -134,6 +139,8 @@ function parseArgs(args) {
     else if (arg === '--validate') { flags.validate = args[++i]; }
     else if (arg === '--list-modes') { flags.listModes = true; }
     else if (arg === '--list-stacks') { flags.listStacks = true; }
+    else if (arg === '--backend') { flags.backend = true; }
+    else if (arg === '--database') { flags.database = args[++i]; }
     else {
       taskWords.push(arg);
     }
@@ -228,13 +235,17 @@ function main() {
     process.exit(1);
   }
 
+  let effectiveTask = task;
+  if (flags.backend) effectiveTask += ' backend';
+  if (flags.database) effectiveTask += ` ${flags.database} database`;
+
   const options = {
     mode: flags.mode,
     template: flags.template,
-    stack: flags.stack,
+    stack: flags.stack || flags.database,
   };
 
-  const result = generatePrompt(task, options);
+  const result = generatePrompt(effectiveTask, options);
 
   // --print-skills-only
   if (flags.printSkillsOnly) {

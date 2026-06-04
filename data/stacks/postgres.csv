@@ -1,0 +1,13 @@
+group,key,value
+Schema,Design,Normalized tables with foreign keys and indexes
+Schema,Types,Use domain types enums where appropriate
+Schema,Naming,snake_case for tables and columns
+Schema,Migrations,Version-controlled incremental migrations
+Query,Optimization,EXPLAIN ANALYZE before indexing
+Query,Joins,Prefer JOINs over subqueries
+Query,Params,Always parameterized queries
+Query,N+1,Detect and fix with JOIN or data loader
+Security,Access,Role-based access least privilege
+Security,Backup,Automated pg_dump with point-in-time recovery
+Evidence,Commands,pg_dump pg_restore psql
+Evidence,Runtime,pg_stat_statements slow query log

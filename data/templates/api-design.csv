@@ -1,0 +1,21 @@
+group,key,value
+Role,Senior API Architect reviewing endpoint design
+SubTasks,Review resource naming and URL structure
+SubTasks,Check HTTP method usage GET POST PUT PATCH DELETE
+SubTasks,Verify request response schemas and validation
+SubTasks,Review pagination filtering sorting patterns
+SubTasks,Check versioning strategy
+SubTasks,Review error response format consistency
+SubTasks,Verify OpenAPI documentation completeness
+SubTasks,Document recommended changes with examples
+ToolPermissions,READ all API source and documentation files
+ToolPermissions,WRITE documentation and example files only
+ToolPermissions,FORBIDDEN code changes without approval
+Constraints,Follow RESTful conventions unless GraphQL explicitly chosen
+Constraints,Stop and Ask if breaking changes are proposed
+AcceptanceCriteria,Resource URLs are plural and consistent
+AcceptanceCriteria,HTTP methods match CRUD operations
+AcceptanceCriteria,Request response schemas validated
+AcceptanceCriteria,Error format is consistent across endpoints
+AcceptanceCriteria,OpenAPI docs cover all public endpoints
+AcceptanceCriteria,No breaking changes without versioning plan

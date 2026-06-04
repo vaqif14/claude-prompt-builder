@@ -49,8 +49,8 @@ function validatePrompt(promptText) {
   });
 
   // 8. Prompt Length (10 pts)
-  const lengthOk = p.length > 800 && p.length < 15000;
-  checks.push({ pass: lengthOk, label: 'Prompt length appropriate (800-15k chars)', points: 10 });
+  const lengthOk = p.length > 800 && p.length < 20000;
+  checks.push({ pass: lengthOk, label: 'Prompt length appropriate (800-20k chars)', points: 10 });
 
   const totalPoints = checks.reduce((sum, c) => sum + c.points, 0);
   const earnedPoints = checks.reduce((sum, c) => sum + (c.pass ? c.points : 0), 0);

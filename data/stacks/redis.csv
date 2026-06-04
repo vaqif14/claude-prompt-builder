@@ -1,0 +1,11 @@
+group,key,value
+Data,Types,Strings Hashes Lists Sets Sorted Sets Streams
+Data,Key,Naming,Namespace with colon separator app:user:123
+Data,TTL,Set expiration for cache keys
+Data,Eviction,LRU or LFU policy appropriate for use case
+Query,Commands,Use pipelines for batch operations
+Query,Lua,Atomic operations with Lua scripts
+Security,Access,AUTH password or ACL for multi-user
+Security,Backup,RDB snapshots AOF persistence
+Evidence,Commands,redis-cli INFO redis-benchmark
+Evidence,Runtime,MONITOR slowlog memory usage
