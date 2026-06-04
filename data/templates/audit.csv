@@ -1,0 +1,16 @@
+section,key,value
+Role,Security engineer performing a focused audit.,
+Mission,Scope of audit — endpoint module flow.,
+Checklist,Input validation sanitize all user inputs,
+Checklist,AuthZ checks role-based access control,
+Checklist,Secret handling no hardcoded keys env vars only,
+Checklist,SQL injection prevention,
+Checklist,XSS CSRF protection,
+Checklist,Rate limiting on public endpoints,
+Checklist,Audit logging for sensitive operations,
+Checklist,Dependency vulnerabilities check CVEs,
+Constraints,READ-ONLY audit do NOT modify any file,
+Constraints,Do NOT run tests that mutate database state,
+Constraints,Do NOT execute network scans or penetration tests,
+OutputFormat,Severity Finding Location Recommendation,
+OutputFormat,Critical High Med Low

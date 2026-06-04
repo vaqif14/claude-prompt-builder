@@ -1,0 +1,18 @@
+category,key,value
+Stack,Framework,Next.js 14 App Router
+Stack,Language,TypeScript strict
+Stack,StateAdmin,TanStack Query
+Stack,StateBidder,Zustand
+Stack,UI,shadcn/ui + Material 3 tokens
+Stack,Realtime,STOMP WebSocket
+Architecture,Pattern,Feature-based slices
+Architecture,Routing,App Router with i18n
+Architecture,State,Zustand owns bidder real-time state
+Conventions,Components,strict TypeScript no any
+Conventions,Imports,absolute paths via tsconfig
+Conventions,i18n,translations added to messages files
+Testing,Unit,Jest
+Testing,E2E,Playwright
+Skills,Required,frontend-patterns ui-ux-pro-max
+AntiPatterns,Do NOT add Vuexy Vuetify npm dependency
+AntiPatterns,Do NOT duplicate API clients

@@ -1,0 +1,17 @@
+section,key,value
+Role,Staff engineer performing a targeted refactor.,
+Mission,What to refactor and why.,
+UserProfile,incremental reviewable changes,
+UserProfile,risk-averse on production code,
+UserProfile,values backwards compatibility,
+MigrationPlan,Prepare: add new pattern alongside old,
+MigrationPlan,Migrate: move call sites one by one,
+MigrationPlan,Verify: tests pass at each step,
+MigrationPlan,Clean: remove old pattern,
+Constraints,Zero breaking changes to public APIs,
+Constraints,Each commit must be independently revertible,
+Constraints,No changes to business logic behavior-preserving,
+AcceptanceCriteria,All existing tests pass without modification,
+AcceptanceCriteria,New pattern matches target specification,
+AcceptanceCriteria,No regression in performance,
+AcceptanceCriteria,Deprecation notes added for removed APIs

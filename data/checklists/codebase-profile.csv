@@ -1,0 +1,22 @@
+category,check,location
+General,README setup run test commands,README.md
+General,AGENTS.md learned preferences,AGENTS.md
+General,CLAUDE.md learned preferences,CLAUDE.md
+General,CI/CD config,.github/workflows .gitlab-ci.yml
+Java,Dependencies plugins,build.gradle pom.xml
+Java,Entry point,src/main/java/**/Application.java
+Java,Configs profiles,src/main/resources/application*.yml
+Java,DB migrations,src/main/resources/db/migration/
+Java,Package structure,src/main/java/
+Java,Test structure,src/test/
+TS,Dependencies scripts,package.json
+TS,TS strictness,tsconfig.json
+TS,Next config,next.config.js
+TS,Routing strategy,src/app/ src/pages/
+TS,Code organization,src/features/ src/modules/
+TS,State management,store files
+TS,API client pattern,src/services/ src/hooks/
+Infra,Docker services,docker-compose.yml
+Infra,Docker build,Dockerfile
+Infra,K8s configs,k8s/ infra/
+Infra,Env vars,.env.example

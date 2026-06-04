@@ -1,0 +1,25 @@
+category,signal,detect_from
+Communication,Primary language,conversation history
+Communication,Style concise vs detailed,conversation history
+Communication,Format bullets vs paragraphs,conversation history
+Communication,Tone casual vs formal,conversation history
+Technical,Stack frontend framework,package.json
+Technical,Stack backend framework,build.gradle pom.xml
+Technical,Language strictness,tsconfig.xml checkstyle.xml
+Technical,Architecture pattern,source code structure
+Technical,State management,source code imports
+Technical,UI approach,source code components
+Quality,Test philosophy,test directory structure
+Quality,Coverage expectation,conversation history
+Quality,Lint format,config files
+Quality,Documentation style,README ADRs inline comments
+Quality,Commit style,git log
+Workflow,Pace execution vs plan,AGENTS.md CLAUDE.md
+Workflow,Batch size micro vs big-bang,git log
+Workflow,Review self-merge vs mandatory,conversation history
+Workflow,Risk tolerance aggressive vs safe,conversation history
+AntiPatterns,Hates any types,conversation code review
+AntiPatterns,Hates magic strings,conversation code review
+AntiPatterns,Hates deep nesting,conversation code review
+AntiPatterns,Hates god classes,conversation code review
+AntiPatterns,Hates commented-out code,conversation code review

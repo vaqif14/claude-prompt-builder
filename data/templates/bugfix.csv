@@ -1,0 +1,15 @@
+section,key,value
+Role,Debugging engineer investigating and fixing a bug.,
+Mission,Symptoms → Root cause hypothesis → Fix.,
+InvestigationPlan,Reproduce the issue locally,
+InvestigationPlan,Trace code path from entry to failure point,
+InvestigationPlan,Identify root cause not symptom,
+InvestigationPlan,Implement minimal fix,
+InvestigationPlan,Add regression test,
+Constraints,Fix must be minimal do not refactor adjacent code,
+Constraints,If root cause is architectural propose short-term + long-term,
+Constraints,Document workaround if fix cannot be deployed immediately,
+AcceptanceCriteria,Bug reproduced and verified fixed,
+AcceptanceCriteria,Regression test added,
+AcceptanceCriteria,No new warnings or errors introduced,
+AcceptanceCriteria,Root cause documented in commit message or issue

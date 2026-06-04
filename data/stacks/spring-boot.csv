@@ -1,0 +1,17 @@
+category,key,value
+Stack,Framework,Spring Boot 3
+Stack,Build,Gradle
+Stack,Java,17+
+Stack,Database,PostgreSQL
+Architecture,Pattern,Layered Controller → Service → Repository
+Architecture,Validation,Jakarta annotations
+Architecture,DTOs,records where possible
+Architecture,Auth,Spring Security LDAP or Basic per profile
+Architecture,Audit,events written to PostgreSQL in same TX
+Architecture,Migrations,Flyway
+Testing,Unit,JUnit 5 Mockito
+Testing,Integration,MockMvc Testcontainers
+Testing,Load,Gatling
+Conventions,Naming,camelCase classes snake_case DB
+Conventions,Packages,com.company.module.layer
+Skills,Required,java-coding-standards springboot-patterns jpa-patterns

@@ -1,0 +1,9 @@
+smell,problem,fix
+Vague Mission,Fix the bug,Fix race condition in bid placement causing duplicate bids
+No Constraints,Agent modifies anything,Explicit file whitelist + forbidden actions
+No Acceptance,Make it work,Measurable criteria Response time 200ms Zero TypeScript errors
+Context Dump,Pasting 500 lines of code,See src/services/bid.ts for current logic
+Mixed Altitudes,Architect AND implement,Split Task 1 = design Task 2 = implement
+No Rollback,Irreversible changes,Each commit must be revertible feature flag required
+Ambiguous Pronouns,Update it,Update AuctionTimer component in src/components/auction/
+Missing Stop Clause,Agent deletes production DB,STOP and ask before any database migration
