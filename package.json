@@ -1,0 +1,49 @@
+{
+  "name": "@vaqif14/prompt-builder",
+  "version": "1.0.0",
+  "description": "Architect-grade prompt engineer for Claude Code. Profiles users, analyzes codebases, and applies CCAP (Claude Code Architecture Patterns) to generate production-ready prompts.",
+  "main": "src/index.js",
+  "bin": {
+    "prompt-builder": "bin/prompt-builder.js"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "search": "node scripts/search.js",
+    "validate": "node scripts/validate.js",
+    "test": "node scripts/validate.js"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "prompt-engineering",
+    "ai-agent",
+    "prompt-builder",
+    "llm",
+    "cursor",
+    "ccap"
+  ],
+  "author": "Vaqif Gulmammadov <vaqif14@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaqif14/claude-prompt-builder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vaqif14/claude-prompt-builder/issues"
+  },
+  "homepage": "https://github.com/vaqif14/claude-prompt-builder#readme",
+  "files": [
+    "src/",
+    "bin/",
+    "scripts/",
+    "data/",
+    "SKILL.md",
+    "REFERENCE.md"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2"
+  }
+}
