@@ -69,7 +69,23 @@ Polish: remove ambiguity, quantify, fence scope, add "Stop and Ask" for irrevers
 
 ## Output
 
-Deliver prompt in code block + **Metadata Card** (Complexity, Context Size, Model, Parallel Agents, Skills, Risk, Rollback).
+Deliver:
+1. **Execution Plan (Todos)** — checkbox list showing all sub-tasks:
+   ```markdown
+   ## [Task Title]
+
+   - [ ] Sub-task 1 description → target
+   - [ ] Sub-task 2 description → target
+   - [ ] Sub-task 3 description → target
+   ```
+   Mark the first/next active task with ❄️ (e.g., `❄️ [ ] Active task`).
+   Wrap long lines naturally (no horizontal scrolling).
+
+2. **Generated Prompt** — paste-ready prompt in code block.
+
+3. **Metadata Card** (Complexity, Context Size, Model, Parallel Agents, Skills, Risk, Rollback).
+
+When generating the prompt itself, always include a **Todos** section inside the prompt so the executing agent can track progress checkbox-style.
 
 ## Advanced
 
