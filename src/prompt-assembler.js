@@ -169,6 +169,28 @@ function generatePrompt(task, options = {}) {
   })
 
   promptSections.push({
+    name: 'GROUNDING CONTRACT',
+    lines: [
+      '═══════════════════════════════════════════════════════════════',
+      '  GROUNDING CONTRACT — RESOLVE BEFORE EXECUTING',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      'This prompt is generated from heuristics and is NOT yet grounded in the target repo.',
+      'Before doing the work, read the actual codebase and resolve these to real file:line targets:',
+      '  • Target route / page / entry file — if it is a redirect, barrel, or re-export, resolve to the true rendering surface',
+      '  • The component / module tree the surface actually renders',
+      '  • Data layer feeding it: hooks, queries, services, or API client',
+      '  • Design tokens / style source (or API/domain contract) to judge against',
+      '  • i18n / locale catalogs, if the project is localized',
+      '  • State branches: loading, empty, and error',
+      '  • Verification commands: detect the package manager / build tool from the lockfile (pnpm-lock.yaml→pnpm, yarn.lock→yarn, package-lock.json→npm; Gradle/Maven/Cargo/etc. for non-JS)',
+      '',
+      'Do not begin work, and do not present a verdict, until these are resolved to concrete paths.',
+      '',
+    ],
+  })
+
+  promptSections.push({
     name: 'CONTEXT WINDOW',
     lines: [
       '═══════════════════════════════════════════════════════════════',
@@ -247,15 +269,16 @@ function generatePrompt(task, options = {}) {
       '═══════════════════════════════════════════════════════════════',
       '',
       'Use this as a managed-agent task board: split the work into owned task cards, run independent cards in parallel when possible, track status, collect artifacts, then synthesize.',
-      'Task Card Schema: id | owner | title | status(todo/in_progress/blocked/done) | depends_on | artifact',
-      ...taskBoard.map(card => `  • ${card.id} | ${card.owner} | ${card.title} | ${card.status} | depends_on=${card.dependsOn} | artifact=${card.artifact}`),
+      'Task Card Schema: id | owner | skill | title | status(todo/in_progress/blocked/done) | depends_on | artifact',
+      ...taskBoard.map(card => `  • ${card.id} | ${card.owner} | skill=${card.skill} | ${card.title} | ${card.status} | depends_on=${card.dependsOn} | artifact=${card.artifact}`),
       '',
+      'Skill Binding Rule: every task card names the skill its owner must load/invoke before executing the card. An agent must not execute its card on intuition alone — load the assigned skill first; if it is unavailable, run find-skills to obtain a trusted equivalent (or mark it unavailable with a reason) before proceeding.',
       'Parallelization Rule: run cards with the same dependency in parallel only if they touch different files/surfaces or are read-only review passes.',
       'Conflict Rule: if two agents need to edit the same file, Coordinator must serialize the work and assign one owner.',
       'Handoff Rule: every agent must return findings, touched files, evidence, blockers, and recommended next task.',
       '',
-      'Universal Agent Roster:',
-      ...universalAgentRoster.map(agent => `  • ${agent.role}: owns=${agent.owns}; when=${agent.when}; deliverable=${agent.deliverable}`),
+      'Universal Agent Roster (each agent → its required skill):',
+      ...universalAgentRoster.map(agent => `  • ${agent.role}: skill=${agent.skill}; owns=${agent.owns}; when=${agent.when}; deliverable=${agent.deliverable}`),
       '',
     ],
   })
@@ -399,8 +422,9 @@ function generatePrompt(task, options = {}) {
       '',
       'Evidence Gates:',
       '  • Every claim must be backed by file:line, screenshot, command output, or log',
-      '  • "Working" verdict requires all gates to pass; partial pass = "Working with issues"',
-      '  • Blocked = missing prerequisites documented precisely',
+      '  • "Working" requires the resolved target surface to actually render with real data (screenshot/output) — not merely passing commands; partial pass = "Working with issues"',
+      '  • A build/test failure outside the target surface is a separate finding, not this surface\'s verdict',
+      '  • Blocked = missing prerequisites (auth, dev server, backend, data) documented precisely',
       '',
     ],
   })
@@ -430,10 +454,23 @@ function generatePrompt(task, options = {}) {
   } = require('./context-manager')
 
   // Single source of truth: derive every section's budgeting priority from the
-  // SECTION_PRIORITIES map instead of hardcoding it on each section literal.
-  for (const s of promptSections) s.priority = SECTION_PRIORITIES[s.name] ?? 1
+  // SECTION_PRIORITIES map. Then protect the section(s) that embody the chosen
+  // mode's core deliverable so token budgeting never elides them first
+  // (e.g. a visual audit must keep its Designer Rubric, a review must keep its
+  // Agent Review Council).
+  const MODE_CRITICAL = {
+    'design-review': ['DESIGNER RUBRIC', 'AGENT REVIEW COUNCIL'],
+    'security-review': ['AGENT REVIEW COUNCIL'],
+    'architecture-review': ['AGENT REVIEW COUNCIL'],
+    'performance-review': ['AGENT REVIEW COUNCIL'],
+  }
+  const critical = new Set(MODE_CRITICAL[mode] || [])
+  if (designerRubric.length) critical.add('DESIGNER RUBRIC')
+  for (const s of promptSections) {
+    s.priority = critical.has(s.name) ? 0 : (SECTION_PRIORITIES[s.name] ?? 1)
+  }
 
-  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 3000 : options.maxTokens)
+  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 3500 : options.maxTokens)
   let finalSections = promptSections
   let budget = null
 

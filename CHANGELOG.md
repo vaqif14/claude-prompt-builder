@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] - 2026-06-05
+
+Real-world test (bidder product-list audit) surfaced gaps; this release closes them.
+
+### Fixed
+
+- **Platform detection word boundaries**: `detectPlatforms` (the 22-entry PLATFORM_REGISTRY)
+  still used substring matching — `main page`→`ai` (ai⊂main), `rusty`→`rust`, `retail`→`ai`.
+  Now every platform keyword is `\b`-bounded (matches the earlier `detectStack` fix). Whole-stack.
+- **Platform signals no longer leak regex source** into the prompt; `signals=` is now a clean
+  human keyword list instead of `\b(?:web|frontend|...)\b`.
+- **Mode routing for visual audits**: "visual design audit" / "audit the ui design" now route to
+  `design-review` (co-occurrence matching) instead of generic `audit`.
+- **Token budget no longer elides the mode-defining section**: priority is mode-aware — a
+  design-review keeps its Designer Rubric + Agent Review Council; skill-discovery is always kept.
+  Default budget raised 3000→3500 to fit the richer prompt.
+- Read-only review modes label their task cards "review pass", not "implementation pass".
+
+### Added
+
+- **Agent → skill binding**: every task-board card and roster agent now names the specific skill
+  its owner must load/invoke (backend→api-design, web→frontend-patterns, designer→ui-ux-pro-max,
+  QA→verification-loop), plus a Skill Binding Rule forbidding execution without the bound skill.
+- **GROUNDING CONTRACT section** (always kept): lists the targets the agent must resolve to real
+  `file:line` before executing (route — resolving redirect/barrel indirection, component tree, data
+  layer, design tokens, i18n, state branches, and package-manager-from-lockfile). SKILL.md adds a
+  hard Conclude gate requiring grounding before the prompt is handed back.
+- **Trusted-source internet discovery**: when a skill is not installed locally, research it only
+  from npm / GitHub / x.com (reputable authors) — never anonymous gists or low-signal sources.
+- **Render-bound verdict**: "Working" now requires the resolved target surface to actually render
+  with real data; a build/test failure outside the target is a separate finding.
+
 ## [1.5.4] - 2026-06-05
 
 ### Fixed

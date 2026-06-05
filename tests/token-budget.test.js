@@ -18,9 +18,9 @@ function test(name, fn) {
 
 console.log('\nToken Budget Tests');
 
-test('default prompt stays under 3000 estimated tokens', () => {
+test('default prompt stays within the 3500 token budget', () => {
   const result = generatePrompt('review admin dashboard and confirm all working');
-  assert(estimateTokens(result.prompt) <= 3000, `Expected <=3000 tokens, got ${estimateTokens(result.prompt)}`);
+  assert(estimateTokens(result.prompt) <= 3500, `Expected <=3500 tokens, got ${estimateTokens(result.prompt)}`);
   assert(result.validation.score >= 90, `Expected strong validation score, got ${result.validation.score}`);
 });
 

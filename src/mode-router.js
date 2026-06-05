@@ -151,7 +151,7 @@ const MODES = {
   },
   'design-review': {
     label: 'Design Review',
-    keywords: /design review|visual review|does this look good|ui polish|visual audit|design check/,
+    keywords: /\b(?:design|visual|ui|ux)\b[\w\s-]*\b(?:review|audit|critique|polish|check)\b|\b(?:review|audit|critique)\b[\w\s-]*\b(?:design|visual|ui|ux)\b|does this look good/,
     authority: 'Read-only design audit. No code changes unless user asks for fixes after.',
     subTasks: [
       'Capture screenshots at key breakpoints (375, 768, 1024, 1440)',

@@ -96,4 +96,21 @@ test('inferMode guard: "fix failing crash" still bugfix (fail suffix kept)', () 
   assert.strictEqual(inferMode('fix failing tests'), 'bugfix');
 });
 
+// Regression: design-review co-occurrence (word order independent)
+test('inferMode: "visual design audit" is design-review (not generic audit)', () => {
+  assert.strictEqual(inferMode('visual design audit'), 'design-review');
+});
+
+test('inferMode: "audit the ui design" is design-review', () => {
+  assert.strictEqual(inferMode('audit the ui design'), 'design-review');
+});
+
+test('inferMode: "design review checkout" still design-review', () => {
+  assert.strictEqual(inferMode('design review checkout'), 'design-review');
+});
+
+test('inferMode guard: "review admin dashboard" stays audit (no design token)', () => {
+  assert.strictEqual(inferMode('review admin dashboard'), 'audit');
+});
+
 console.log('');

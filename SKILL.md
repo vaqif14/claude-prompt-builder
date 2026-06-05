@@ -31,6 +31,14 @@ The skill does the work of understanding it **against the real codebase**, not j
 4. **Conclude with the prompt.** Once the intent is concrete, emit the orchestration prompt
    (sections below) with the real targets filled in — never a generic, placeholder prompt.
 
+**Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact. It emits a
+`GROUNDING CONTRACT` block listing the targets that still need resolving. Do NOT hand the
+prompt back to the user while those are unresolved — replace the generic "Map target route…"
+sub-tasks and the `GROUNDING CONTRACT` slots with concrete `file:line` targets you found by
+reading the repo. If the named entry point is a redirect / barrel / re-export, resolve to the
+true rendering surface first (e.g. a `page.tsx` that just `redirect()`s elsewhere). Detect the
+package manager / build tool from the lockfile and state the real verification commands.
+
 Goal: the user explains normally; the skill understands the codebase and either asks one
 sharp question or hands back a ready, codebase-grounded prompt.
 
@@ -120,8 +128,8 @@ Every generated prompt should require the next agent to:
 3. If the MD is missing, generate it from bundled stack intelligence, installed skill metadata, required skills, missing skills, and refresh queries.
 4. Search installed skill metadata under `.claude/skills`, `.codex/skills`, `.agents/skills`, and global user skill folders only when no fresh stack profile exists or refresh is requested.
 5. Invoke `find-skills` when available and the stack profile says a stronger skill is needed.
-6. If network/tooling is available and refresh is requested, search the open ecosystem with `npx skills find "<task keywords>"`.
-7. Verify quality before recommending: task fit, source reputation, install count, clear `SKILL.md`, and direct workflow value.
+6. If network/tooling is available and refresh is requested, search the open ecosystem with `npx skills find "<task keywords>"`. When a skill is not installed locally, research it on the internet **only from trusted sources** — the npm registry, GitHub (repos/topics with a clear `SKILL.md`, stars, recent commits), and curated ecosystem signals on x.com from reputable authors. Never pull a skill from anonymous gists, pastebins, or unvetted low-signal sources.
+7. Verify quality before recommending: trusted source (above), task fit, source reputation, install count, clear `SKILL.md`, and direct workflow value.
 8. If a better skill is found, recommend:
    - `npx skills add <package> -g -y`
    - `/reload-skills`

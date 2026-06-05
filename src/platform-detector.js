@@ -8,14 +8,14 @@ const PLATFORM_REGISTRY = [
   {
     id: 'web',
     label: 'Web / Frontend',
-    keywords: /web|frontend|react|next|tsx|jsx|dashboard|page|component|card|mui|vue|svelte|angular|shadcn|tailwind|css|html|dom/,
+    keywords: /\b(?:web|frontend|react(?:js)?|next(?:js)?|tsx|jsx|dashboards?|pages?|components?|cards?|mui|vue(?:js)?|svelte|angular|shadcn|tailwind|css|html|dom)\b/,
     defaultSkills: ['frontend-patterns', 'ui-ux-pro-max', 'browser-qa', 'verification-loop'],
     evidence: 'route/component tree, browser screenshots, console/network, typecheck/lint/build',
   },
   {
     id: 'backend',
     label: 'Backend / API',
-    keywords: /backend|api|server|spring|java|controller|service|repository|database|sql|graphql|rest/,
+    keywords: /\b(?:backend|api|server|spring|java|controller|service|repository|database|sql|graphql|rest)\b/,
     defaultSkills: ['api-design', 'springboot-patterns', 'postgres-patterns', 'database-migrations', 'security-review', 'verification-loop'],
     evidence: 'endpoint contracts, service flow, database/schema impact, unit/integration tests, security checks',
   },
@@ -57,70 +57,70 @@ const PLATFORM_REGISTRY = [
   {
     id: 'ios',
     label: 'iOS / Swift',
-    keywords: /ios|swift|swiftui|uikit|xcode|iphone|ipad|visionos|watchos|macos|cocoa/,
+    keywords: /\b(?:ios|swift|swiftui|uikit|xcode|iphone|ipad|visionos|watchos|macos|cocoa)\b/,
     defaultSkills: ['build-ios-apps:swiftui-ui-patterns', 'build-ios-apps:ios-debugger-agent', 'build-ios-apps:swiftui-performance-audit'],
     evidence: 'Xcode project/scheme, SwiftUI hierarchy, simulator run, screenshots, logs, XCTest where available',
   },
   {
     id: 'android',
     label: 'Android / Kotlin',
-    keywords: /android|kotlin|jetpack|compose|gradle|apk|emulator|xml|mvvm/,
+    keywords: /\b(?:android|kotlin|jetpack|compose|gradle|apk|emulator|xml|mvvm)\b/,
     defaultSkills: ['test-android-apps:android-emulator-qa', 'test-android-apps:android-performance', 'find-skills'],
     evidence: 'Gradle tasks, emulator QA, screenshots, logcat, UI state checks, instrumentation/unit tests',
   },
   {
     id: 'flutter',
     label: 'Flutter / Dart',
-    keywords: /flutter|dart/,
+    keywords: /\b(?:flutter|dart)\b/,
     defaultSkills: ['find-skills'],
     evidence: 'widget tree, flutter analyze/test, device/emulator screenshots, platform-specific constraints',
   },
   {
     id: 'react-native',
     label: 'React Native / Expo',
-    keywords: /react native|react-native|expo/,
+    keywords: /react native|react-native|\bexpo\b/,
     defaultSkills: ['find-skills', 'ui-ux-pro-max'],
     evidence: 'Metro/Expo flow, native platform checks, screenshots, accessibility, state/data hooks',
   },
   {
     id: 'desktop',
     label: 'Desktop App',
-    keywords: /desktop|electron|tauri|native app/,
+    keywords: /\b(?:desktop|electron|tauri)\b|native app/,
     defaultSkills: ['find-skills', 'verification-loop'],
     evidence: 'window states, OS integration, packaging constraints, runtime logs, interaction QA',
   },
   {
     id: 'cli',
     label: 'CLI / Tooling',
-    keywords: /cli|command line|terminal|script|tooling/,
+    keywords: /\b(?:cli|terminal|script|tooling)\b|command line/,
     defaultSkills: ['find-skills', 'verification-loop'],
     evidence: 'command UX, flags/help text, exit codes, fixtures, shell tests',
   },
   {
     id: 'devops',
     label: 'DevOps / Deployment',
-    keywords: /docker|deploy|vercel|ci|cd|pipeline|kubernetes|infra|devops|helm|terraform/,
+    keywords: /\b(?:docker|deploy|vercel|ci|cd|pipeline|kubernetes|infra|devops|helm|terraform)\b/,
     defaultSkills: ['docker-patterns', 'deploy-to-vercel', 'verification-loop'],
     evidence: 'environment assumptions, build/deploy commands, rollback, logs, CI evidence',
   },
   {
     id: 'ai',
     label: 'AI / Agent / RAG App',
-    keywords: /ai|llm|rag|agent|openai|model|embedding|vector|langchain|crewai/,
+    keywords: /\b(?:ai|llm|rag|agent|openai|model|embedding|vector|langchain|crewai)\b/,
     defaultSkills: ['openai-docs', 'find-skills'],
     evidence: 'model/API docs, prompt/data flow, eval cases, persistence, safety and cost checks',
   },
   {
     id: 'laravel',
     label: 'Laravel / PHP',
-    keywords: /laravel|php|eloquent|blade|artisan|composer|symfony/,
+    keywords: /\b(?:laravel|php|eloquent|blade|artisan|composer|symfony)\b/,
     defaultSkills: ['find-skills'],
     evidence: 'route/controller structure, Eloquent models, Blade views, artisan commands, PHPUnit tests',
   },
   {
     id: 'python',
     label: 'Python',
-    keywords: /python|fastapi|django|flask|pydantic|sqlalchemy|celery/,
+    keywords: /\b(?:python|fastapi|django|flask|pydantic|sqlalchemy|celery)\b/,
     defaultSkills: ['find-skills'],
     evidence: 'app structure, route handlers, ORM models, pytest coverage, type hints (mypy)',
   },
@@ -134,39 +134,55 @@ const PLATFORM_REGISTRY = [
   {
     id: 'rust',
     label: 'Rust',
-    keywords: /rust|cargo|actix|tokio|axum|tide|rocket/,
+    keywords: /\b(?:rust|cargo|actix|tokio|axum|tide|rocket)\b/,
     defaultSkills: ['find-skills'],
     evidence: 'crate structure, async runtime, cargo test/clippy, memory-safety evidence',
   },
   {
     id: 'dotnet',
     label: '.NET / C#',
-    keywords: /\.net|c#|asp\.net|ef core|blazor|xamarin|dotnet/,
+    keywords: /\.net|c#|asp\.net|\bef core\b|\bblazor\b|\bxamarin\b|\bdotnet\b/,
     defaultSkills: ['find-skills'],
     evidence: 'solution/project structure, controller/services, EF migrations, xUnit tests',
   },
   {
     id: 'unity',
     label: 'Unity / Game Dev',
-    keywords: /unity|game dev|unreal|godot|csharp game|physics|shader/,
+    keywords: /\b(?:unity|unreal|godot|shader)\b|game dev|csharp game|\bphysics\b/,
     defaultSkills: ['find-skills'],
     evidence: 'scene hierarchy, script architecture, build targets, play-mode tests, profiler evidence',
   },
   {
     id: 'data-ml',
     label: 'Data / ML Pipeline',
-    keywords: /data pipeline|ml|pytorch|tensorflow|pandas|jupyter|sklearn|notebook/,
+    keywords: /data pipeline|\bml\b|\bpytorch\b|\btensorflow\b|\bpandas\b|\bjupyter\b|\bsklearn\b|\bnotebook\b/,
     defaultSkills: ['find-skills'],
     evidence: 'data flow, model versioning, eval metrics, pipeline reproducibility, notebook review',
   },
   {
     id: 'db',
     label: 'Database',
-    keywords: /postgresql|mongo|redis|elasticsearch|prisma|drizzle|clickhouse|sqlite/,
+    keywords: /\b(?:postgresql|mongo(?:db)?|redis|elasticsearch|prisma|drizzle|clickhouse|sqlite)\b/,
     defaultSkills: ['database-migrations', 'postgres-patterns'],
     evidence: 'schema design, migration safety, query plan, indexing, backup/restore evidence',
   },
 ];
+
+// Turn a keyword regex into a short human-readable signal list for the prompt,
+// instead of leaking the raw regex source (\b(?:...)\b) to the next agent.
+function humanizeSignals(regex) {
+  return regex.source
+    .replace(/\\b/g, '')
+    .replace(/\(\?:/g, '')
+    .replace(/[()?]/g, '')
+    .replace(/\\s\+/g, ' ')
+    .replace(/\\/g, '')
+    .split('|')
+    .map(t => t.trim())
+    .filter(Boolean)
+    .slice(0, 10)
+    .join(', ');
+}
 
 function detectPlatforms(task) {
   const lower = task.toLowerCase();
@@ -177,7 +193,7 @@ function detectPlatforms(task) {
       platforms.push({
         id: p.id,
         label: p.label,
-        signals: p.keywords.source,
+        signals: humanizeSignals(p.keywords),
         defaultSkills: [...p.defaultSkills],
         evidence: p.evidence,
       });

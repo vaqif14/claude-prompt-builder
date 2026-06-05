@@ -82,6 +82,32 @@ test('detectStack does NOT mistake "email validation" for ai-app', () => {
   assert.notStrictEqual(detectStack('email validation'), 'ai-app');
 });
 
+// Regression: detectPlatforms must use word boundaries too (not just detectStack)
+test('detectPlatforms: "main page" is NOT ai (ai⊂main)', () => {
+  const ids = detectPlatforms('main page').map(p => p.id);
+  assert(!ids.includes('ai'), `unexpected ai lane: ${ids}`);
+  assert(ids.includes('web'), 'should still detect web');
+});
+
+test('detectPlatforms: "retail dashboard" is NOT ai (ai⊂retail)', () => {
+  assert(!detectPlatforms('retail dashboard').map(p => p.id).includes('ai'));
+});
+
+test('detectPlatforms: "rusty old button" is NOT rust (rust⊂rusty)', () => {
+  assert(!detectPlatforms('rusty old button').map(p => p.id).includes('rust'));
+});
+
+test('detectPlatforms guard: real signals still detected', () => {
+  assert(detectPlatforms('rust axum service').map(p => p.id).includes('rust'));
+  assert(detectPlatforms('build an ai rag agent').map(p => p.id).includes('ai'));
+  assert(detectPlatforms('react component').map(p => p.id).includes('web'));
+});
+
+test('detectPlatformsMixed: single-platform task gets no spurious integration lane', () => {
+  const ids = detectPlatformsMixed('bidder product list main page').map(p => p.id);
+  assert(!ids.includes('integration'), `spurious integration lane: ${ids}`);
+});
+
 test('all platforms have required fields', () => {
   for (const p of PLATFORM_REGISTRY) {
     assert(p.id, `Platform missing id`);

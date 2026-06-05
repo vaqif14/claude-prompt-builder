@@ -3,7 +3,11 @@ const {
   analyzeTask,
   getSkillInvocationPlan,
   getAgentCouncil,
+  getMulticaStyleTaskBoard,
+  getUniversalAgentRoster,
+  getSkillDiscoveryProtocol,
 } = require('../src/skill-matcher');
+const { detectPlatformsMixed } = require('../src/platform-detector');
 
 function test(name, fn) {
   try {
@@ -71,6 +75,29 @@ test('getAgentCouncil for "implement checkout flow" excludes Browser QA Engineer
 
 test('getAgentCouncil guard: "verify all working" includes Browser QA Engineer', () => {
   assert(councilRoles('verify all working').includes('Browser QA Engineer'));
+});
+
+// Agent -> skill binding: every agent card/roster entry owns a specific skill
+test('task board binds a skill to every card; backend card gets a backend skill', () => {
+  const platforms = detectPlatformsMixed('spring boot backend api service');
+  const board = getMulticaStyleTaskBoard('review spring boot api', 'audit', platforms);
+  for (const c of board) assert(c.skill && c.skill.length, `card ${c.id} (${c.owner}) missing skill`);
+  const backendCard = board.find(c => /Backend/.test(c.owner));
+  assert(backendCard, `expected a Backend agent card; owners: ${board.map(c => c.owner).join(' / ')}`);
+  assert(backendCard.skill && backendCard.skill !== 'find-skills', `backend card skill not bound to a backend skill: ${backendCard.skill}`);
+});
+
+test('universal roster binds a skill to every agent', () => {
+  const platforms = detectPlatformsMixed('spring boot backend api');
+  const roster = getUniversalAgentRoster('review api', 'audit', platforms, 'Medium', {});
+  for (const a of roster) assert(a.skill && a.skill.length, `agent ${a.role} missing skill`);
+});
+
+// Trusted-source internet discovery appears when no cached profile exists
+test('skill discovery protocol restricts internet research to trusted sources', () => {
+  const proto = getSkillDiscoveryProtocol('review api', [], [], 'spring-boot', null).join('\n');
+  assert(/trusted sources/i.test(proto), 'expected trusted-source guidance');
+  assert(/github/i.test(proto) && /x\.com/i.test(proto) && /npm registry/i.test(proto), 'expected github/x.com/npm trusted sources');
 });
 
 console.log('');

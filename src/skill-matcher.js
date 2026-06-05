@@ -277,7 +277,8 @@ function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', st
     'Step 1 — Local scan: inspect available skill metadata in .claude/skills, .codex/skills, .agents/skills, and globally installed skill folders. Match by name and description, not by filename only.',
     'Step 2 — Ecosystem scan: invoke the find-skills workflow. If CLI/network is available, run npx skills find with the queries below.',
     ...queries.map(query => `Search query: npx skills find "${query}"`),
-    'Step 3 — Quality gate: prefer official or reputable sources, high install counts, clear SKILL.md instructions, and direct task fit. Do not recommend a random low-signal skill just because it appears in search.',
+    'Step 2b — Trusted sources only: if the skill is not installed locally, research it on the internet ONLY from trusted sources — the npm registry (scoped skill packages via npx skills), GitHub (repos/topics with a clear SKILL.md, meaningful stars, and recent commits), and curated ecosystem signals on x.com from reputable authors. Never install from anonymous gists, pastebins, shortened URLs, or unvetted low-signal sources.',
+    'Step 3 — Quality gate: confirm the source is one of the trusted sources above, then judge install count, clear SKILL.md instructions, maintenance recency, and direct task fit. Do not recommend a random low-signal skill just because it appears in search.',
     'Step 4 — Recommendation: if a better skill is found, stop and recommend: install command, why it is better, and the exact prompt command to rerun after /reload-skills.',
     'Step 5 — Fallback: if no better skill is found or install is not approved, continue with the best installed skills listed below and explicitly say discovery found no stronger option.',
   ];
@@ -381,32 +382,39 @@ function getAgentCouncil(task, mode, complexity, options) {
 
 function getUniversalAgentRoster(task, mode, platforms = [], complexity, options) {
   const agents = [];
-  const add = (role, owns, when, deliverable) => {
+  // Each agent is bound to the skill it must load/invoke to do its job. Platform
+  // agents inherit the platform's primary skill (currentSkill); cross-cutting
+  // agents pass an explicit skill.
+  let currentSkill = 'find-skills';
+  const add = (role, owns, when, deliverable, skill) => {
     if (agents.some(agent => agent.role === role)) return;
-    agents.push({ role, owns, when, deliverable, model: selectModel(task, complexity, options) });
+    agents.push({ role, owns, when, deliverable, skill: skill || currentSkill, model: selectModel(task, complexity, options) });
   };
 
   add(
     'Coordinator / Tech Lead',
     'task decomposition, dependency graph, conflict boundaries, final synthesis',
     'always',
-    'task board, agent assignment table, merged decision log, final verdict'
+    'task board, agent assignment table, merged decision log, final verdict',
+    'none (orchestration)'
   );
   add(
     'Skill Scout',
     'local and ecosystem skill discovery before execution',
     'always',
-    'skills searched, install/load recommendations, rerun command'
+    'skills searched, install/load recommendations, rerun command',
+    'find-skills'
   );
 
   for (const platform of platforms) {
+    currentSkill = (platform.defaultSkills && platform.defaultSkills[0]) || 'find-skills';
     if (platform.id === 'web') {
       add('Frontend/Web Agent', 'routes, components, UI state, browser behavior', 'web/frontend tasks', 'file findings, UI fixes, browser evidence');
-      add('Product/UI Designer Agent', 'visual hierarchy, layout, typography, responsive polish', 'visual/product tasks', 'designer rubric findings and top design fixes');
+      add('Product/UI Designer Agent', 'visual hierarchy, layout, typography, responsive polish', 'visual/product tasks', 'designer rubric findings and top design fixes', 'ui-ux-pro-max');
     }
     if (platform.id === 'backend') {
       add('Backend/API Agent', 'controllers/services/repositories/contracts', 'backend/API tasks', 'endpoint flow, tests, contract risks');
-      add('Data/DB Agent', 'schema, migrations, query correctness, persistence', 'database tasks', 'schema impact and data safety report');
+      add('Data/DB Agent', 'schema, migrations, query correctness, persistence', 'database tasks', 'schema impact and data safety report', 'database-migrations');
     }
     if (platform.id === 'ios') {
       add('iOS/Swift Agent', 'SwiftUI/UIKit structure, Xcode build, simulator behavior', 'iOS tasks', 'Swift/Xcode findings, simulator screenshots/logs');
@@ -477,19 +485,23 @@ function getUniversalAgentRoster(task, mode, platforms = [], complexity, options
     'QA/Verification Agent',
     'static gates, runtime proof, regression checks, screenshots/logs',
     mode === 'audit' ? 'audit/review tasks' : 'after implementation',
-    'commands run, pass/fail gates, blockers, residual risk'
+    'commands run, pass/fail gates, blockers, residual risk',
+    'verification-loop'
   );
 
   return agents;
 }
 
 function getMulticaStyleTaskBoard(task, mode, platforms = []) {
-  const taskType = ['audit', 'bugfix', 'refactor'].includes(mode) ? mode : 'implementation';
+  const taskType = ['audit', 'bugfix', 'refactor'].includes(mode)
+    ? mode
+    : (mode.endsWith('-review') || mode === 'release-check' ? 'review' : 'implementation');
 
   const cards = [
     {
       id: 'T0',
       owner: 'Coordinator / Tech Lead',
+      skill: 'none (orchestration)',
       title: 'Normalize request and define task graph',
       status: 'todo',
       dependsOn: 'none',
@@ -498,6 +510,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
     {
       id: 'T1',
       owner: 'Skill Scout',
+      skill: 'find-skills',
       title: 'Discover local and ecosystem skills',
       status: 'todo',
       dependsOn: 'T0',
@@ -506,10 +519,12 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
   ];
 
   platforms.forEach((platform, index) => {
+    const platformSkill = (platform.defaultSkills && platform.defaultSkills[0]) || 'find-skills';
     if (platform.isIntegrationLane) {
       cards.push({
         id: `I1`,
         owner: `${platform.label} Agent`,
+        skill: platformSkill,
         title: `Cross-platform integration verification`,
         status: 'todo',
         dependsOn: platforms.filter(p => !p.isIntegrationLane).map((_, i) => `P${i + 1}`).join(', '),
@@ -519,6 +534,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
       cards.push({
         id: `P${index + 1}`,
         owner: `${platform.label} Agent`,
+        skill: platformSkill,
         title: `${taskType} pass for ${platform.label}`,
         status: 'todo',
         dependsOn: 'T1',
@@ -531,6 +547,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
     {
       id: 'Q1',
       owner: 'QA/Verification Agent',
+      skill: 'verification-loop',
       title: 'Run verification gates and collect runtime evidence',
       status: 'todo',
       dependsOn: platforms.length ? platforms.filter(p => !p.isIntegrationLane).map((_, index) => `P${index + 1}`).join(', ') : 'T1',
@@ -539,6 +556,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
     {
       id: 'S1',
       owner: 'Coordinator / Tech Lead',
+      skill: 'none (synthesis)',
       title: 'Synthesize findings and produce final answer',
       status: 'todo',
       dependsOn: 'Q1',
