@@ -17,3 +17,18 @@ Database,Migrations,golang-migrate or atlas
 Database,Connection,Pool size env-driven connection string from env
 Evidence,Commands,go test go vet go build staticcheck
 Evidence,Runtime,pprof for profiling structured logs
+BestPractices,Interfaces,Define interfaces for repositories and services
+BestPractices,Errors,Wrap errors with context using fmt.Errorf
+BestPractices,Context,Pass context.Context through the call chain
+BestPractices,Structs,Use value types where possible avoid pointer obsession
+BestPractices,Testing,Table-driven tests with testify/assert
+AntiPatterns,No Interfaces,Tight coupling to concrete implementations
+AntiPatterns,Nil Panics,Returning nil without nil checks
+AntiPatterns,Global State,Package-level variables instead of dependency injection
+AntiPatterns,No Context,Long-running ops without context cancellation
+AntiPatterns,Raw SQL,String-interpolated queries instead of parameterized
+Verification,Type Check,go vet staticcheck
+Verification,Lint,golangci-lint
+Verification,Tests,go test -race -cover
+Verification,Build,go build
+Verification,Security,gosec

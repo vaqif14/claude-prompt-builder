@@ -17,3 +17,18 @@ Database,Migrations,python manage.py makemigrations migrate
 Database,Admin,Django Admin for internal data management
 Evidence,Commands,python manage.py test python -m pytest
 Evidence,Runtime,Django logs Sentry for errors
+BestPractices,MVT,Fat models skinny views custom managers
+BestPractices,Forms,Form validation before business logic
+BestPractices,DRF,Serializers for API with validation
+BestPractices,Admin,Custom Admin for internal operations
+BestPractices,Testing,pytest-django or Django TestCase
+AntiPatterns,Fat Views,Business logic in views instead of models/services
+AntiPatterns,Raw SQL,String-interpolated queries
+AntiPatterns,No Migrations,Schema changes without makemigrations
+AntiPatterns,Mass Assignment,No protection against mass assignment
+AntiPatterns,Synchronous Only,Long-running ops blocking request cycle
+Verification,Type Check,django-stubs mypy
+Verification,Lint,ruff or flake8 black
+Verification,Tests,pytest or python manage.py test
+Verification,Build,docker build or pip install -e ".[test]"
+Verification,Security,bandit safety check

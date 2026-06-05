@@ -1,7 +1,17 @@
 category,key,value
 Stack,Platform,Desktop application
 Stack,Runtime,Electron Tauri native or project-specific framework
+Architecture,Pattern,Separate shell window state native bridge and domain logic
+Architecture,State,Keep OS integrations explicit and testable
 Tools,Build,project build package and runtime commands
 Testing,Required,window state interaction and OS integration checks
 Skills,Required,find-skills verification-loop
+BestPractices,Window UX,Verify resizing focus menus shortcuts and system theme behavior
+BestPractices,Security,Limit native bridge permissions and validate IPC inputs
+BestPractices,Packaging,Check build packaging signing and update constraints before release
 AntiPatterns,Do NOT assume mobile or browser route QA
+AntiPatterns,Unsafe IPC,Do not expose broad filesystem or shell access through renderer code
+AntiPatterns,Single Surface QA,Do not test only one OS behavior when app is cross-platform
+Verification,Build,project build and package command
+Verification,Runtime,Launch app inspect logs window states and interactions
+Verification,Security,Review IPC permissions and native bridge surface

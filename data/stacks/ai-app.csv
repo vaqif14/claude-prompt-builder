@@ -1,7 +1,17 @@
 category,key,value
 Stack,Platform,AI / LLM / RAG / agent application
 Stack,Core,model calls prompts tools memory retrieval persistence
+Architecture,Pattern,Separate prompt orchestration tools retrieval persistence evals and UI/API adapters
+Architecture,State,Make model inputs outputs and tool calls traceable and reproducible
 Tools,Docs,official API docs model/provider references eval fixtures
 Testing,Required,eval cases safety checks cost and persistence verification
 Skills,Required,openai-docs vercel:ai-sdk find-skills verification-loop
+BestPractices,Evals,Define regression evals for quality safety and tool correctness
+BestPractices,Persistence,Store generations tool results and user-visible state with stable IDs
+BestPractices,Cost,Track model choice token usage retries and rate limits
 AntiPatterns,Do NOT invent API behavior without checking official docs
+AntiPatterns,No Evals,Do not rely only on manual prompt inspection for production AI flows
+AntiPatterns,Hidden State,Do not make agent decisions impossible to trace or reproduce
+Verification,Docs,Check official provider docs for APIs and model behavior
+Verification,Evals,Run targeted eval cases and persistence checks
+Verification,Safety,Check prompt injection data exposure and tool permission boundaries

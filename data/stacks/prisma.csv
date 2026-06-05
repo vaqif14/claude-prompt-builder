@@ -10,3 +10,18 @@ Security,Access,Connection string from env never committed
 Security,Validation,@db.VarChar limits enum constraints
 Evidence,Commands,prisma migrate dev prisma generate prisma studio
 Evidence,Runtime,Query logging with duration metrics
+BestPractices,Schema,Prisma schema as single source of truth
+BestPractices,Relations,Explicit @relation with referential actions
+BestPractices,Indexes,@index @unique for performance
+BestPractices,Migrations,Prisma Migrate with shadow database
+BestPractices,Connection,Connection pooling env-driven URL
+AntiPatterns,No Indexes,Missing @index on query fields
+AntiPatterns,Select All,findMany without select or take limit
+AntiPatterns,No Migrations,Direct schema changes without migrate
+AntiPatterns,Raw Queries,Excessive use of $queryRaw instead of Prisma Client
+AntiPatterns,No Validation,Missing field constraints in schema
+Verification,Schema,prisma validate
+Verification,Types,prisma generate type check
+Verification,Migrations,prisma migrate status
+Verification,Queries,query logging with duration
+Verification,Security,connection string not committed

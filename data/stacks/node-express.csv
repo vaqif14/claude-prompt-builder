@@ -17,3 +17,19 @@ Database,Migrations,Prisma migrate or db-migrate
 Database,Connection,Pool size env-driven never hardcode credentials
 Evidence,Commands,npm test npm run lint npm run build
 Evidence,Runtime,PM2 logs or Docker container health checks
+BestPractices,Modularity,Keep controllers thin business logic in services
+BestPractices,Validation,Validate at boundary never trust external input
+BestPractices,Errors,Centralized error handling with consistent response format
+BestPractices,Logging,Structured logs with correlation ID per request
+BestPractices,Config,Environment-driven configuration no secrets in code
+BestPractices,Testing,Unit + integration + contract tests for every endpoint
+AntiPatterns,Fat Controllers,Business logic in controllers instead of services
+AntiPatterns,Raw SQL,String-interpolated queries instead of parameterized
+AntiPatterns,No Validation,Missing input validation on public endpoints
+AntiPatterns,Secrets in Code,Hardcoded API keys database passwords in source
+AntiPatterns,Sync DB Calls,Blocking database calls in async handlers
+Verification,Type Check,npm run typecheck or tsc --noEmit
+Verification,Lint,npm run lint or eslint
+Verification,Tests,npm test with coverage report
+Verification,Build,npm run build or docker build
+Verification,Security,npm audit or snyk test

@@ -18,3 +18,18 @@ Database,Migrations,TypeORM migrations or Prisma migrate
 Database,Connection,ConfigService-driven never hardcode
 Evidence,Commands,npm run test npm run lint npm run build
 Evidence,Runtime,NestJS health checks /health endpoint
+BestPractices,Modularity,One module per domain with clear exports
+BestPractices,Validation,DTO + ValidationPipe with whitelist transform
+BestPractices,Guards,Use @UseGuards for auth and role checks
+BestPractices,Config,ConfigModule with env validation schema
+BestPractices,Testing,Unit with Test.createTestingModule E2E with supertest
+AntiPatterns,Fat Controllers,Business logic in controllers instead of services
+AntiPatterns,No DTOs,Using any or raw objects instead of typed DTOs
+AntiPatterns,Decorators with Logic,Complex logic inside custom decorators
+AntiPatterns,Circular Imports,Modules importing each other creating cycles
+AntiPatterns,Missing Guards,Public routes without authentication checks
+Verification,Type Check,npm run build or tsc --noEmit
+Verification,Lint,npm run lint or eslint
+Verification,Tests,npm run test or jest --coverage
+Verification,Build,npm run build
+Verification,Security,npm audit snyk test

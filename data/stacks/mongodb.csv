@@ -10,3 +10,18 @@ Security,Access,Role-based access control RBAC
 Security,Backup,mongodump with automated scheduling
 Evidence,Commands,mongodump mongorestore mongosh
 Evidence,Runtime,db.currentOp() profiler logs
+BestPractices,Schema,Design documents with embedded vs referenced decisions
+BestPractices,Indexes,Compound indexes for common query patterns
+BestPractices,Validation,Schema validation with JSON Schema
+BestPractices,Migrations,mongodb-migrate or custom migration scripts
+BestPractices,Backup,mongodump with automated scheduling
+AntiPatterns,Deep Nesting,Documents nested more than 3 levels deep
+AntiPatterns,No Indexes,Missing indexes on query fields
+AntiPatterns,Unbounded Arrays,Arrays growing without size limits
+AntiPatterns,No Validation,Missing schema validation
+AntiPatterns,No Backup,No automated backup strategy
+Verification,Schema,db.collection.getIndexes() validator
+Verification,Indexes,db.collection.explain()
+Verification,Queries,profiler.currentOp() slow queries
+Verification,Backup,mongodump test restore
+Verification,Security,db.getUsers() role check

@@ -2,7 +2,17 @@ category,key,value
 Stack,Platform,React Native / Expo
 Stack,Language,TypeScript or JavaScript
 Stack,UI,Native components and platform-specific behavior
+Architecture,Pattern,Screen components hooks services and native boundary modules
+Architecture,State,Use project state layer consistently and keep side effects out of render paths
 Tools,Build,Metro Expo native simulators or emulators
 Testing,Required,unit tests and device/emulator QA when available
 Skills,Required,find-skills ui-ux-pro-max verification-loop
+BestPractices,Native Parity,Verify iOS and Android separately for layout gestures and permissions
+BestPractices,Performance,Avoid unnecessary re-renders and oversized bridge traffic
+BestPractices,Accessibility,Verify labels roles focus and text scaling on both platforms
 AntiPatterns,Do NOT assume web DOM-only behavior
+AntiPatterns,Platform Blindness,Do not ship one-platform behavior without checking the other
+AntiPatterns,Render Side Effects,Do not trigger network or storage side effects during render
+Verification,Build,npm test plus Expo or native build command where available
+Verification,Runtime,Simulator or emulator screenshots logs and interaction checks
+Verification,Bundle,Check Metro errors and native dependency warnings

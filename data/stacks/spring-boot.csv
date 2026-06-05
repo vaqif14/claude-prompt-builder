@@ -18,3 +18,18 @@ Database,Migrations,Flyway or Liquibase version-controlled
 Database,Connection,HikariCP pool env-driven never hardcode
 Evidence,Commands,./gradlew test ./gradlew bootRun
 Evidence,Runtime,Actuator health endpoints structured logging
+BestPractices,Layering,Controller → Service → Repository with DTOs
+BestPractices,Records,Use Java records for DTOs and immutable data
+BestPractices,Validation,@Valid with Bean Validation on request DTOs
+BestPractices,Transactions,@Transactional on service boundaries
+BestPractices,Testing,JUnit 5 + Mockito integration with Testcontainers
+AntiPatterns,Entity Leakage,Returning JPA entities from controllers
+AntiPatterns,N+1 Queries,Missing JOIN FETCH or EntityGraph
+AntiPatterns,No Validation,Missing @Valid on request parameters
+AntiPatterns,Business in Controllers,Complex logic in @RestController
+AntiPatterns,Raw SQL,String-interpolated native queries
+Verification,Type Check,./gradlew compileJava
+Verification,Lint,./gradlew checkstyleMain or spotlessCheck
+Verification,Tests,./gradlew test
+Verification,Build,./gradlew bootJar
+Verification,Security,OWASP dependency check

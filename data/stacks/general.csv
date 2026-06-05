@@ -4,4 +4,9 @@ Architecture,Pattern,Discover project structure before assuming framework
 Conventions,Changes,Keep changes scoped to requested task and existing patterns
 Testing,Required,Use available build test lint verification commands
 Skills,Required,find-skills verification-loop
+BestPractices,Discovery,Read package scripts project docs and neighboring files before choosing an approach
+BestPractices,Scope,Prefer minimal changes aligned with existing conventions
 AntiPatterns,Do NOT assume web frontend when platform is unclear
+AntiPatterns,Wrong Stack,Do not apply framework-specific advice before confirming the stack
+Verification,Static,Run available lint typecheck build and tests
+Verification,Runtime,Collect task-specific runtime evidence when applicable

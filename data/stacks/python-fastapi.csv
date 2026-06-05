@@ -17,3 +17,18 @@ Database,Migrations,Alembic with auto-generate revision
 Database,Connection,Settings-driven URL from env
 Evidence,Commands,pytest mypy ruff black
 Evidence,Runtime,uvicorn logs structured logging
+BestPractices,Async,Use async endpoints with async DB drivers
+BestPractices,Schemas,Pydantic models for every request response
+BestPractices,DI,Depends for shared resources DB settings cache
+BestPractices,Validation,Pydantic Field constraints auto-documented
+BestPractices,Testing,pytest with httpx.AsyncClient or TestClient
+AntiPatterns,Blocking I/O,Synchronous file or DB calls in async endpoints
+AntiPatterns,No Schemas,Using dict or Any instead of Pydantic models
+AntiPatterns,Business in Endpoints,Complex logic in route handlers
+AntiPatterns,Missing Auth,No OAuth2 or JWT on sensitive endpoints
+AntiPatterns,No Migrations,Schema changes without Alembic migrations
+Verification,Type Check,mypy or pyright
+Verification,Lint,ruff or flake8 black
+Verification,Tests,pytest --cov
+Verification,Build,docker build or pip install -e ".[test]"
+Verification,Security,bandit safety check

@@ -1,7 +1,17 @@
 category,key,value
 Stack,Platform,CLI or developer tooling
 Stack,Runtime,Project-specific language and command runner
+Architecture,Pattern,Command parser core logic adapters and fixture-based tests
+Architecture,UX,Keep flags help output exit codes stdout and stderr predictable
 Tools,UX,help text flags exit codes stdout stderr fixtures
 Testing,Required,command transcripts unit tests fixture tests
 Skills,Required,find-skills verification-loop
+BestPractices,Help,Every command should have clear help examples and error messages
+BestPractices,Exit Codes,Use stable nonzero exit codes for failures
+BestPractices,Fixtures,Test with deterministic fixtures and captured transcripts
 AntiPatterns,Do NOT design GUI workflows for CLI-only tasks
+AntiPatterns,Silent Failure,Do not hide errors or return success on failed operations
+AntiPatterns,Unstable Output,Do not change machine-readable output without versioning
+Verification,Help,Run command --help and invalid input cases
+Verification,Tests,Run unit fixture and shell transcript tests where available
+Verification,Exit Codes,Check stdout stderr and exit status

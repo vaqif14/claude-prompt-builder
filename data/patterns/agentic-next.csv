@@ -1,0 +1,16 @@
+pattern,source_signal,next_feature
+VerificationFirst,Claude Code best practices say agents need tests builds screenshots or readable checks before claiming completion,Verification-first contract with source command browser and device evidence gates
+ExplorePlanCode,Claude Code recommends exploring first then planning then coding,Prompt mode output should separate exploration plan implementation and verification phases
+ContextDiet,Claude Code and Anthropic context engineering warn that context fills fast and degrades performance,Context diet score and bloat warnings in context report
+SubagentIsolation,Claude Code recommends subagents for investigation and fresh-context review,Subagent isolation rules for research review and verification lanes
+AdversarialReview,Claude Code recommends fresh-context diff review before treating long work as done,Reviewer lane that checks correctness and stated requirements only
+HooksOverInstructions,Claude Code says hooks are deterministic while markdown instructions are advisory,Hook recommendation engine for repeatable safety and verification actions
+ToolSearchFirst,X trend summaries mention dynamic MCP tool search to reduce tool-description context,Tool-search-first protocol before loading large MCP/tool catalogs
+MinimalToolset,Anthropic context engineering warns about bloated overlapping toolsets,Tool overlap detector and minimal viable toolset recommendation
+ToolContracts,Anthropic tool guidance treats tools as contracts for non-deterministic agents,Tool description scoring for namespacing boundaries examples and token-efficient returns
+ComposableWorkflows,Anthropic effective agents recommends simple composable workflows before autonomous agents,Workflow router for prompt-chain routing parallel orchestrator-workers and evaluator-optimizer
+SkillProgressiveDisclosure,Anthropic skill guidance recommends concise SKILL.md files and one-level references,Skill bloat detector and progressive-disclosure review
+HackathonDomainFirst,Anthropic hackathon winners show strong domain experts can win with Claude Code,Hackathon mode with domain insight MVP demo proof and pitch evidence
+SelectiveProfiles,X/ECC signals show powerful large setups but token overhead risk,Selective install profiles instead of bulk skill or agent installation
+AgentPortfolio,X discussions frame .claude folders as auditable workflow infrastructure,Agent-readiness audit for CLAUDE.md skills subagents hooks MCP plugins and verification
+McpAuthSandbox,X MCP discussions mention auth pain failed tool calls JSON output and sandbox proxy needs,MCP readiness report for auth sandbox JSON output and tool failure handling

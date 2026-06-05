@@ -14,6 +14,14 @@ Conventions,i18n,translations added to messages files
 Testing,Unit,project package scripts
 Testing,E2E,Playwright
 Skills,Required,frontend-patterns ui-ux-pro-max enterprise-ui-architect
+BestPractices,App Router,Respect server/client boundaries and keep data fetching close to route ownership
+BestPractices,State,Use TanStack Query for server state and keep Zustand for client realtime state only
+BestPractices,i18n,Update all locale message files when visible copy changes
+BestPractices,UI,Use existing design tokens MUI primitives and shadcn components consistently
 AntiPatterns,Use Vuexy only as visual composition reference
 AntiPatterns,Do NOT add Vuexy Vuetify npm dependency
 AntiPatterns,Do NOT duplicate API clients
+Verification,Type Check,npm run typecheck or project equivalent
+Verification,Lint,npm run lint
+Verification,Build,npm run build when dependencies and network allow
+Verification,Runtime,Playwright or browser screenshot console network checks

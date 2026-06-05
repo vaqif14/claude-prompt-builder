@@ -106,7 +106,13 @@ class AgentHarness {
   }
 
   // Spawn a subagent
-  async spawnAgent(description, prompt, agentType = 'explore') {
+  async spawnAgent(description, prompt, agentType = 'explore', agentConfig = null) {
+    // If agentConfig is passed, use it as the source of truth (new API)
+    if (agentConfig && typeof agentConfig === 'object') {
+      description = agentConfig.description || description;
+      prompt = agentConfig.prompt || prompt;
+      agentType = agentConfig.type || agentType;
+    }
     const agentId = `agent_${Date.now()}`;
     
     logAudit(`AGENT SPAWNED: ${description} (${agentId})`, this.sessionId);
@@ -212,4 +218,21 @@ if (require.main === module) {
   main().catch(console.error);
 }
 
-module.exports = { AgentHarness };
+// Standalone function wrappers for harness integration
+function preToolUse(toolName, params, sessionId = 'default') {
+  const harness = new AgentHarness(sessionId);
+  return harness.preToolUse(toolName, params);
+}
+
+function postToolUse(toolName, rawResult, params, sessionId = 'default') {
+  const harness = new AgentHarness(sessionId);
+  return harness.postToolUse(toolName, rawResult, params);
+}
+
+function spawnAgent(agentConfig, sessionId = 'default') {
+  const harness = new AgentHarness(sessionId);
+  const { description = '', prompt = '', type = 'explore' } = agentConfig || {};
+  return harness.spawnAgent(description, prompt, type, null);
+}
+
+module.exports = { AgentHarness, preToolUse, postToolUse, spawnAgent };

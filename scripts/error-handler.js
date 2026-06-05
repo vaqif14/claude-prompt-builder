@@ -8,32 +8,36 @@ const ERROR_CATEGORIES = {
 };
 
 function categorizeError(error) {
-  if (error instanceof TimeoutError || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+  const code = error && error.code;
+  const name = error && error.name;
+  const message = String((error && error.message) || '');
+
+  if (name === 'TimeoutError' || code === 'ETIMEDOUT' || code === 'ECONNRESET' || /timeout|timed out/i.test(message)) {
     return {
       category: ERROR_CATEGORIES.TRANSIENT,
       isRetryable: true,
       retryAfterMs: 2000,
-      description: `Timeout/connection error: ${error.message}`
+      description: `Timeout/connection error: ${message}`
     };
   }
-  if (error instanceof PermissionError || error.code === 'EACCES' || error.code === 'EPERM') {
+  if (name === 'PermissionError' || code === 'EACCES' || code === 'EPERM' || /permission denied|access denied/i.test(message)) {
     return {
       category: ERROR_CATEGORIES.PERMISSION,
       isRetryable: false,
-      description: `Access denied: ${error.message}`
+      description: `Access denied: ${message}`
     };
   }
-  if (error instanceof TypeError || error instanceof RangeError || error.name === 'ValidationError') {
+  if (error instanceof TypeError || error instanceof RangeError || name === 'ValidationError') {
     return {
       category: ERROR_CATEGORIES.VALIDATION,
       isRetryable: false,
-      description: `Invalid input: ${error.message}`
+      description: `Invalid input: ${message}`
     };
   }
   return {
     category: ERROR_CATEGORIES.INTERNAL,
     isRetryable: false,
-    description: `Unexpected error: ${error.message}`
+    description: `Unexpected error: ${message}`
   };
 }
 

@@ -17,3 +17,18 @@ Database,Migrations,sqlx migrate or diesel migration
 Database,Connection,Deadpool or bb8 connection pool env-driven
 Evidence,Commands,cargo test cargo clippy cargo build
 Evidence,Runtime,tracing structured logs tokio-console for async
+BestPractices,Traits,Define traits for repository and service boundaries
+BestPractices,Errors,Use Result and thiserror for error types
+BestPractices,Async,Tokio runtime with structured concurrency
+BestPractices,Types,Leverage type system for compile-time guarantees
+BestPractices,Testing,Unit with mockall integration with sqlx test
+AntiPatterns,Unwrap,Using unwrap or expect in production code
+AntiPatterns,Blocking,Blocking operations in async context
+AntiPatterns,Clone Everywhere,Unnecessary cloning instead of borrowing
+AntiPatterns,Unsafe,Unsafe code without clear safety comments
+AntiPatterns,Raw SQL,String-interpolated queries instead of sqlx
+Verification,Type Check,cargo clippy
+Verification,Lint,cargo fmt --check
+Verification,Tests,cargo test
+Verification,Build,cargo build --release
+Verification,Security,cargo audit

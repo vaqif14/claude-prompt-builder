@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs');
+const { PROMPT_INJECTION_MARKERS, DANGEROUS_BASH_PATTERNS } = require('../src/sanitize');
 
 /**
  * Validation V2 — Quality scoring for generated prompts
@@ -10,47 +11,72 @@ function validatePrompt(promptText) {
   const p = promptText;
   const checks = [];
 
-  // 1. Skill Discovery (15 pts)
+  // 1. Skill Discovery (12 pts)
   const hasSkillDiscovery = /Skill Discovery Preflight/i.test(p) &&
-    /local scan|ecosystem scan|npx skills find/i.test(p);
-  checks.push({ pass: hasSkillDiscovery, label: 'Skill discovery preflight present', points: 15 });
+    /local scan|ecosystem scan|npx skills find|stack profile cache|cached stack profile/i.test(p);
+  const hasStackSpecificDiscovery = /npx skills find "[a-z-]+ best practices"/i.test(p) ||
+    /npx skills find "[a-z-]+ security review"/i.test(p) ||
+    /npx skills find "[a-z-]+ testing review"/i.test(p) ||
+    /Stack profile cache:\s*(HIT|MISS|REFRESHED)/i.test(p);
+  checks.push({ pass: hasSkillDiscovery, label: 'Skill discovery preflight present', points: 7 });
+  checks.push({ pass: hasStackSpecificDiscovery, label: 'Stack-specific skill discovery queries', points: 5 });
 
-  // 2. Platform Detection (15 pts)
+  // 2. Platform Detection (12 pts)
   const hasPlatform = /Detected Platform|Platform Profile/i.test(p) &&
     /signals|default skills|evidence/i.test(p);
-  checks.push({ pass: hasPlatform, label: 'Platform correctly detected with evidence', points: 15 });
+  checks.push({ pass: hasPlatform, label: 'Platform correctly detected with evidence', points: 12 });
 
-  // 3. Agent Roster / Task Board (15 pts)
+  // 3. Agent Roster / Task Board (12 pts)
   const hasAgentBoard = /Multica-Style Task Board|Agent Assignment|task card|owner/i.test(p) &&
     /id \||owner \||title \||depends_on/i.test(p);
-  checks.push({ pass: hasAgentBoard, label: 'Agent roster or task board present', points: 15 });
+  checks.push({ pass: hasAgentBoard, label: 'Agent roster or task board present', points: 12 });
 
-  // 4. Evidence Gates (15 pts)
+  // 4. Evidence Gates (12 pts)
   const hasEvidence = /Evidence Gates|evidence required|screenshot|console|network|log/i.test(p);
-  checks.push({ pass: hasEvidence, label: 'Evidence gates defined', points: 15 });
+  checks.push({ pass: hasEvidence, label: 'Evidence gates defined', points: 12 });
 
-  // 5. Stop Conditions (10 pts)
+  // 5. Stop Conditions (8 pts)
   const hasStopConditions = /Stop Conditions|Stop and Ask|escalate/i.test(p);
-  checks.push({ pass: hasStopConditions, label: 'Stop conditions present', points: 10 });
+  checks.push({ pass: hasStopConditions, label: 'Stop conditions present', points: 8 });
 
-  // 6. Output Schema Actionable (10 pts)
+  // 6. Output Schema Actionable (8 pts)
   const hasOutputSchema = /Output Schema|Output Format/i.test(p) &&
     /file:line|verdict|screenshot|changelog|test/i.test(p);
-  checks.push({ pass: hasOutputSchema, label: 'Output schema is actionable', points: 10 });
+  checks.push({ pass: hasOutputSchema, label: 'Output schema is actionable', points: 8 });
 
-  // 7. Not Generic (10 pts)
+  // 7. Not Generic (8 pts)
   const hasPlaceholder = /\[stack\]|\[platform\]|\[skill\]/i.test(p);
   const hasVagueTasks = /Analyze existing implementations|Implement solution|Add validation/i.test(p) &&
     !/file:line|route|component|hook|api/i.test(p);
   checks.push({
     pass: !hasPlaceholder && !hasVagueTasks,
     label: 'Not generic (no placeholders, no vague sub-tasks)',
-    points: 10,
+    points: 8,
   });
 
-  // 8. Prompt Length (10 pts)
-  const lengthOk = p.length > 800 && p.length < 20000;
-  checks.push({ pass: lengthOk, label: 'Prompt length appropriate (800-20k chars)', points: 10 });
+  // 8. Prompt Length (8 pts)
+  const tokens = Math.ceil(p.length / 4);
+  const lengthOk = tokens > 200 && tokens < 5000;
+  checks.push({ pass: lengthOk, label: 'Prompt within token budget', points: 8 });
+
+  // 9. Stack Intelligence (v1.5.0) — 15 pts
+  const hasStackProfile = /Stack:/i.test(p) && /Pattern:|DI:|Decorators:|Commands:|Runtime:/i.test(p);
+  const hasBestPractices = /STACK BEST PRACTICES/i.test(p) || /Best Practice|best-practice/i.test(p);
+  const hasAntiPatterns = /ANTI-PATTERNS/i.test(p) || /anti-pattern|AntiPattern|avoid/i.test(p);
+  const hasVerificationGates = /VERIFICATION GATES/i.test(p) || /verification|Verification Gate/i.test(p);
+  checks.push({ pass: hasStackProfile, label: 'Stack profile present with pattern/convention data', points: 4 });
+  checks.push({ pass: hasBestPractices, label: 'Stack best practices section present', points: 4 });
+  checks.push({ pass: hasAntiPatterns, label: 'Anti-patterns section present', points: 4 });
+  checks.push({ pass: hasVerificationGates, label: 'Verification gates section present', points: 3 });
+
+  // 10. Security Gate (v1.5.1) — 5 pts
+  const hasInjection = PROMPT_INJECTION_MARKERS.some(m => m.test(p));
+  const hasDangerousBash = DANGEROUS_BASH_PATTERNS.some(m => m.test(p));
+  checks.push({
+    pass: !hasInjection && !hasDangerousBash,
+    label: 'No prompt injection or dangerous patterns',
+    points: 5,
+  });
 
   const totalPoints = checks.reduce((sum, c) => sum + c.points, 0);
   const earnedPoints = checks.reduce((sum, c) => sum + (c.pass ? c.points : 0), 0);

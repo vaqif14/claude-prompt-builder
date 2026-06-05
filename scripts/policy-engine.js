@@ -98,4 +98,6 @@ if (require.main === module) {
   console.log(JSON.stringify(result, null, 2));
 }
 
-module.exports = { applyPolicies, addPolicy, POLICIES };
+const checkPolicy = applyPolicies;
+
+module.exports = { applyPolicies, addPolicy, POLICIES, checkPolicy };

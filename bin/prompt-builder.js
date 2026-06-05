@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 const { generatePrompt, searchData, validatePrompt, listModes, detectPlatformsMixed } = require('../src/index');
+const { createSession, saveTurn, getSession, listSessions, resumeSession } = require('../src/session-store');
+const { runWithHarness } = require('../src/harness-integration');
 const fs = require('fs');
 const chalk = require('chalk');
+const pkg = require('../package.json');
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -27,7 +30,7 @@ function box(title, lines, color = 'cyan') {
 }
 
 function showHelp() {
-  box('prompt-builder v1.4.1', [
+  box(`prompt-builder v${pkg.version}`, [
     chalk.gray('Universal agent orchestration planner for coding agents'),
     '',
     chalk.white('Author:  ') + chalk.cyan('Vaqif Gulmammadov'),
@@ -46,6 +49,15 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--stack')} <stack> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override stack detection')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--backend')} "${chalk.yellow('<task>')}"                             ${chalk.gray('# Force backend context')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--database')} <db> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Force database context')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--init-stack-profile')} ${chalk.cyan('--stack')} <stack>               ${chalk.gray('# Create stack profile MD only')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--refresh-stack-profile')} "${chalk.yellow('<task>')}"                ${chalk.gray('# Regenerate stack profile MD')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--no-stack-cache')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Disable stack profile cache')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--model')} <model> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override model selection (haiku, sonnet, opus)')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--session-id')} <id> "${chalk.yellow('<task>')}"                    ${chalk.gray('# Resume existing session')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--list-sessions')}                                   ${chalk.gray('# Show recent sessions')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 3000)')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--full')} "${chalk.yellow('<task>')}"                                ${chalk.gray('# Disable token compression')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage breakdown')}
 
 ${chalk.bold('Modes:')}
   ${chalk.yellow('feature')}            ${chalk.gray('Feature implementation (default)')}
@@ -94,6 +106,7 @@ function printMetadataCard(meta, validation) {
     chalk.gray('Validation').padEnd(16) + ' │ ' + scoreColor(`${validation.score}/100`),
     chalk.gray('Agents').padEnd(16) + ' │ ' + chalk.white(meta.agents),
     chalk.gray('Read-only').padEnd(16) + ' │ ' + chalk.white(meta.readOnly ? 'Yes' : 'No'),
+    chalk.gray('Stack Profile').padEnd(16) + ' │ ' + chalk.white(meta.stackProfile ? `${meta.stackProfile.status}: ${meta.stackProfile.path}` : 'Disabled'),
     chalk.gray('Task').padEnd(16) + ' │ ' + chalk.white(meta.task.substring(0, 34)),
   ];
   box('Metadata Card', lines, 'gray');
@@ -117,7 +130,16 @@ function parseArgs(args) {
     listStacks: false,
     backend: false,
     database: null,
+    initStackProfile: false,
+    refreshStackProfile: false,
+    noStackCache: false,
+    sessionId: null,
+    listSessions: false,
+    model: null,
     help: false,
+    harness: false,
+    maxTokens: 3000,
+    contextReport: false,
   };
 
   const taskWords = [];
@@ -141,6 +163,15 @@ function parseArgs(args) {
     else if (arg === '--list-stacks') { flags.listStacks = true; }
     else if (arg === '--backend') { flags.backend = true; }
     else if (arg === '--database') { flags.database = args[++i]; }
+    else if (arg === '--init-stack-profile') { flags.initStackProfile = true; }
+    else if (arg === '--refresh-stack-profile') { flags.refreshStackProfile = true; }
+    else if (arg === '--no-stack-cache') { flags.noStackCache = true; }
+    else if (arg === '--model') { flags.model = args[++i]; }
+    else if (arg === '--session-id') { flags.sessionId = args[++i]; }
+    else if (arg === '--list-sessions') { flags.listSessions = true; }
+    else if (arg === '--max-tokens') { flags.maxTokens = parseInt(args[++i], 10); }
+    else if (arg === '--context-report') { flags.contextReport = true; }
+    else if (arg === '--harness') { flags.harness = true; }
     else {
       taskWords.push(arg);
     }
@@ -199,6 +230,22 @@ function main() {
     process.exit(0);
   }
 
+  // List sessions
+  if (flags.listSessions) {
+    console.log(`\n  ${chalk.bold.white('🗄  Recent Sessions')}\n`);
+    const sessions = listSessions();
+    if (sessions.length === 0) {
+      console.log(`  ${chalk.gray('No sessions found.')}`);
+    } else {
+      for (const s of sessions) {
+        const date = new Date(s.updated_at).toLocaleString();
+        console.log(`  ${chalk.cyan('•')} ${chalk.yellow(s.id)}  ${chalk.white(s.task.substring(0, 40))}  ${chalk.gray(date)}`);
+      }
+    }
+    console.log('');
+    process.exit(0);
+  }
+
   // List stacks
   if (flags.listStacks) {
     console.log(`\n  ${chalk.bold.white('🏗️  Available Stacks')}\n`);
@@ -230,12 +277,36 @@ function main() {
     process.exit(0);
   }
 
-  if (!task) {
+  let effectiveTask = task;
+  if (!effectiveTask && flags.initStackProfile && (flags.stack || flags.database || flags.platform)) {
+    effectiveTask = `initialize ${flags.stack || flags.database || flags.platform} stack profile`;
+  }
+
+  if (!effectiveTask && !flags.sessionId) {
     console.error(chalk.red('  ✖ Error: Provide a task description'));
     process.exit(1);
   }
 
-  let effectiveTask = task;
+  // Resume or create session
+  let sessionId = null;
+  if (flags.sessionId) {
+    const resumed = resumeSession(flags.sessionId);
+    if (resumed) {
+      sessionId = flags.sessionId;
+      if (!effectiveTask && resumed.lastTurn) {
+        try {
+          const last = JSON.parse(resumed.lastTurn.output || '{}');
+          effectiveTask = resumed.session.task || 'continued session';
+        } catch (e) {
+          effectiveTask = resumed.session.task || 'continued session';
+        }
+      }
+    } else {
+      // Session will be created with the requested id during persist
+      sessionId = flags.sessionId;
+    }
+  }
+
   if (flags.backend) effectiveTask += ' backend';
   if (flags.database) effectiveTask += ` ${flags.database} database`;
 
@@ -243,9 +314,93 @@ function main() {
     mode: flags.mode,
     template: flags.template,
     stack: flags.stack || flags.database,
+    platform: flags.platform,
+    stackProfile: !flags.noStackCache,
+    refreshStackProfile: flags.refreshStackProfile || flags.initStackProfile,
+    model: flags.model,
+    cwd: process.cwd(),
+    maxTokens: flags.maxTokens,
+    full: flags.full,
+    contextReport: flags.contextReport,
   };
 
+  // Harness mode
+  if (flags.harness) {
+    const harnessResult = runWithHarness(effectiveTask, { ...options, sessionId: flags.sessionId });
+
+    if (flags.json) {
+      console.log(JSON.stringify({
+        prompt: harnessResult.prompt,
+        policyChecks: harnessResult.policyChecks,
+        sessionId: harnessResult.sessionId,
+      }, null, 2));
+      process.exit(0);
+    }
+
+    if (flags.save) {
+      if (harnessResult.prompt) {
+        fs.writeFileSync(flags.save, harnessResult.prompt, 'utf-8');
+        console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
+      }
+      console.log(`  ${chalk.gray(`Session: ${harnessResult.sessionId}`)}`);
+      console.log(`  ${chalk.gray(`Policy: ${harnessResult.policyChecks.allowed ? 'PASSED' : 'BLOCKED'} (${harnessResult.policyChecks.policy || 'none'})`)}`);
+      process.exit(0);
+    }
+
+    if (flags.compact) {
+      if (harnessResult.prompt) console.log(harnessResult.prompt);
+      process.exit(0);
+    }
+
+    box('Generated Prompt (Harness Mode)', [
+      chalk.gray('Universal Agent Orchestration Planner'),
+      chalk.gray(`Session: ${harnessResult.sessionId}`),
+      chalk.gray(`Policy: ${harnessResult.policyChecks.allowed ? 'PASSED' : 'BLOCKED'}`),
+    ], harnessResult.policyChecks.allowed ? 'green' : 'red');
+
+    if (harnessResult.prompt) {
+      console.log('');
+      hr('green');
+      console.log(chalk.white(harnessResult.prompt));
+      hr('green');
+    }
+
+    const policyLines = [
+      chalk.gray('Status').padEnd(16) + ' │ ' + (harnessResult.policyChecks.allowed ? chalk.green('ALLOWED') : chalk.red('BLOCKED')),
+      chalk.gray('Policy').padEnd(16) + ' │ ' + chalk.white(harnessResult.policyChecks.policy || 'none'),
+      chalk.gray('Reason').padEnd(16) + ' │ ' + chalk.white(harnessResult.policyChecks.reason || 'N/A'),
+      chalk.gray('Session ID').padEnd(16) + ' │ ' + chalk.cyan(harnessResult.sessionId),
+    ];
+    box('Harness Policy Check', policyLines, harnessResult.policyChecks.allowed ? 'gray' : 'red');
+
+    process.exit(0);
+  }
+
   const result = generatePrompt(effectiveTask, options);
+
+  // Persist session best-effort. Prompt generation must not fail because local
+  // history storage is unavailable in a sandbox or read-only environment.
+  let sessionPersisted = false;
+  try {
+    if (!sessionId || !resumeSession(sessionId)) {
+      sessionId = createSession(effectiveTask, result.metadata.mode, result.metadata.stack, sessionId || undefined);
+    }
+    saveTurn(sessionId, effectiveTask, result.prompt, result.validation.score);
+    sessionPersisted = true;
+  } catch (error) {
+    if (flags.sessionId || flags.listSessions) {
+      console.error(chalk.yellow(`  ⚠ Session persistence unavailable: ${error.message}`));
+    }
+    sessionId = sessionId || 'not-persisted';
+  }
+
+  if (flags.initStackProfile) {
+    const profile = result.metadata.stackProfile;
+    console.log(`\n  ${chalk.green('✓')} Stack profile ${profile.status}: ${chalk.cyan(profile.path)}`);
+    console.log(`  ${chalk.gray(`Stack: ${result.metadata.stack} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'}`)}`);
+    console.log(`  ${chalk.gray('Missing skills are written to the MD as approval-required install commands.')}\n`);
+    process.exit(0);
+  }
 
   // --print-skills-only
   if (flags.printSkillsOnly) {
@@ -274,6 +429,9 @@ function main() {
     fs.writeFileSync(flags.save, result.prompt, 'utf-8');
     console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
     console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Validation: ${result.validation.score}/100`)}`);
+    if (result.metadata.stackProfile) {
+      console.log(`  ${chalk.gray(`Stack profile: ${result.metadata.stackProfile.status} ${result.metadata.stackProfile.path}`)}`);
+    }
     process.exit(0);
   }
 
@@ -287,6 +445,8 @@ function main() {
   box('Generated Prompt', [
     chalk.gray('Universal Agent Orchestration Planner'),
     chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'}`),
+    chalk.gray(`Stack profile: ${result.metadata.stackProfile ? `${result.metadata.stackProfile.status} ${result.metadata.stackProfile.path}` : 'disabled'}`),
+    chalk.gray(`Session: ${sessionPersisted ? sessionId : 'not persisted'}`),
   ], 'green');
 
   // Extract sub-tasks for execution plan display
@@ -310,6 +470,28 @@ function main() {
   hr('green');
 
   printMetadataCard(result.metadata, result.validation);
+
+  if (flags.contextReport) {
+    const { getContextReport } = require('../src/context-manager');
+    const report = getContextReport();
+    if (report) {
+      console.log('');
+      hr('cyan');
+      console.log(`  ${chalk.bold.white('📊 Context Report')}`);
+      hr('cyan');
+      console.log(`  ${chalk.gray('Total:')} ${chalk.white(report.totalTokens)} ${chalk.gray('tokens')} ${chalk.gray('| Budget:')} ${chalk.white(flags.maxTokens || 'unlimited')}`);
+      for (const s of report.sections) {
+        const color = s.action === 'keep' ? chalk.green : s.action === 'compress' ? chalk.yellow : chalk.red;
+        console.log(`  ${color(s.action.padEnd(8))} ${chalk.gray(s.name.padEnd(34))} ${chalk.white(String(s.used).padStart(4))} / ${chalk.white(String(s.allocated).padStart(4))}`);
+      }
+      hr('cyan');
+    }
+  }
+
+  console.log('');
+  hr('gray');
+  console.log(`  ${chalk.gray('Session ID:')} ${chalk.cyan(sessionPersisted ? sessionId : 'not persisted')}`);
+  hr('gray');
 }
 
 main();

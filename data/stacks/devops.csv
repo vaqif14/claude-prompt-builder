@@ -1,7 +1,17 @@
 category,key,value
 Stack,Platform,DevOps / deployment / CI-CD
 Stack,Core,build pipeline environment variables deployment target rollback
+Architecture,Pattern,Separate build release deploy rollback observability and incident response gates
+Architecture,Config,Keep environments explicit reproducible and least-privilege
 Tools,Verification,logs health checks smoke tests CI status
 Testing,Required,build deploy dry-run smoke verification when safe
 Skills,Required,docker-patterns deploy-to-vercel vercel:deployments-cicd verification-loop
+BestPractices,Rollback,Every deployment prompt needs rollback and blast-radius notes
+BestPractices,Secrets,Verify env vars secrets and permissions without exposing values
+BestPractices,Observability,Check logs metrics traces health checks and alert coverage
 AntiPatterns,Do NOT run production deploys or destructive infra commands without explicit approval
+AntiPatterns,Manual Drift,Do not rely on undocumented manual production changes
+AntiPatterns,No Rollback,Do not ship without a tested rollback or mitigation plan
+Verification,CI,Check build test lint and security gates
+Verification,Runtime,Check health smoke tests logs and monitoring
+Verification,Release,Confirm rollback target and deployment diff before production actions

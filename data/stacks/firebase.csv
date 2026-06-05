@@ -10,3 +10,18 @@ Security,Auth,Firebase Auth with custom claims
 Security,Rules,Allow only authenticated users with ownership
 Evidence,Commands,firebase deploy firebase emulators:start
 Evidence,Runtime,Firebase logs Cloud Functions metrics
+BestPractices,Schema,NoSQL design with denormalization plan
+BestPractices,Rules,Security rules for every collection
+BestPractices,Batch,Batch writes for atomic operations
+BestPractices,Auth,Firebase Auth with custom claims
+BestPractices,Indexes,Composite indexes for compound queries
+AntiPatterns,No Rules,Collections without security rules
+AntiPatterns,Deep Nesting,Documents nested more than 3 levels
+AntiPatterns,Client Admin,Admin SDK credentials in client code
+AntiPatterns,No Indexes,Missing composite indexes
+AntiPatterns,No Backup,No automated export strategy
+Verification,Schema,firestore export test restore
+Verification,Rules,Firebase Emulator rules testing
+Verification,Auth,Auth test flows
+Verification,Indexes,index error analysis
+Verification,Security,rules simulation test

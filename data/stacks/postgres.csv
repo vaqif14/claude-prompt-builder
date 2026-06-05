@@ -11,3 +11,18 @@ Security,Access,Role-based access least privilege
 Security,Backup,Automated pg_dump with point-in-time recovery
 Evidence,Commands,pg_dump pg_restore psql
 Evidence,Runtime,pg_stat_statements slow query log
+BestPractices,Normalization,3NF for OLTP denormalize only for analytics
+BestPractices,Indexes,B-Tree on FKs and search columns partial where needed
+BestPractices,Constraints,Foreign keys check constraints not null where appropriate
+BestPractices,Migrations,Version-controlled incremental migrations
+BestPractices,Connection,Connection pooling PgBouncer env-driven config
+AntiPatterns,No Indexes,Missing indexes on foreign keys and query columns
+AntiPatterns,Select Star,SELECT * in production queries
+AntiPatterns,No Constraints,Missing foreign keys or check constraints
+AntiPatterns,Bigint IDs,Using bigint for small cardinality enums
+AntiPatterns,No Migrations,Schema changes without version control
+Verification,Schema,\d table_name or pg_dump --schema-only
+Verification,Indexes,pg_indexes or EXPLAIN ANALYZE
+Verification,Queries,EXPLAIN ANALYZE for slow queries
+Verification,Backup,pg_dump test restore
+Verification,Security,\du role permissions check

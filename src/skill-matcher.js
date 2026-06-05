@@ -3,6 +3,8 @@
  * Matches tasks to skills, builds agent councils, task boards, and designer rubrics.
  */
 
+const { selectModel } = require('./model-router');
+
 function analyzeTask(task) {
   const lower = task.toLowerCase();
   const domains = [];
@@ -117,12 +119,12 @@ function analyzeTask(task) {
   return { domains, complexity, agentCount };
 }
 
-function getSkillInvocationPlan(task, template, domains, platforms = []) {
+function getSkillInvocationPlan(task, template, domains, platforms = [], complexity, options) {
   const lower = task.toLowerCase();
   const plan = [];
   const add = (skill, reason, instruction) => {
     if (plan.some(item => item.skill === skill)) return;
-    plan.push({ skill, reason, instruction });
+    plan.push({ skill, reason, instruction, model: selectModel(task, complexity, options) });
   };
 
   add(
@@ -202,9 +204,17 @@ function getSkillInvocationPlan(task, template, domains, platforms = []) {
   return plan;
 }
 
-function getSkillSearchQueries(task, domains, platforms = []) {
+function getSkillSearchQueries(task, domains, platforms = [], stack = '') {
   const lower = task.toLowerCase();
   const queries = new Set();
+  const stackName = stack.replace(/-/g, ' ');
+
+  // Stack-specific queries first
+  if (stackName) {
+    queries.add(`${stackName} best practices`);
+    queries.add(`${stackName} security review`);
+    queries.add(`${stackName} testing review`);
+  }
 
   if (/admin|dashboard|analytics|kpi|widget|table|chart/.test(lower)) {
     queries.add('enterprise admin dashboard ui review');
@@ -234,11 +244,33 @@ function getSkillSearchQueries(task, domains, platforms = []) {
   }
 
   if (queries.size === 0) queries.add(task);
-  return [...queries].slice(0, 6);
+  return [...queries].slice(0, 8);
 }
 
-function getSkillDiscoveryProtocol(task, domains, platforms = []) {
-  const queries = getSkillSearchQueries(task, domains, platforms);
+function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', stackProfile = null) {
+  const queries = getSkillSearchQueries(task, domains, platforms, stack);
+
+  if (stackProfile && stackProfile.status === 'hit') {
+    return [
+      `Stack profile cache: HIT at ${stackProfile.relativePath}.`,
+      'Read the cached stack profile first and use its required skills, missing-skill queue, best practices, anti-patterns, and verification gates.',
+      'Do not repeat broad local skill scans or ecosystem searches for this stack on this run.',
+      'Only refresh discovery if the cached profile is stale, the task introduces a new platform, or the user explicitly asks for refresh.',
+      'If a cached required skill is missing, ask the user before installing it; never install skills silently.',
+    ];
+  }
+
+  if (stackProfile && (stackProfile.status === 'created' || stackProfile.status === 'refreshed')) {
+    const status = stackProfile.status === 'created' ? 'MISS -> CREATED' : 'REFRESHED';
+    return [
+      `Stack profile cache: ${status} at ${stackProfile.relativePath}.`,
+      'Prompt Builder generated the stack profile before this prompt using bundled stack intelligence and installed skill metadata.',
+      'Use the generated profile as the source of truth for required skills, missing-skill queue, best practices, anti-patterns, and verification gates.',
+      'Do not run ecosystem searches again during this prompt unless the generated profile explicitly says a stronger skill is needed.',
+      'If a generated missing-skill entry is required, ask the user for approval before running any install command.',
+    ];
+  }
+
   return [
     'Purpose: do not rely only on the prompt-builder hardcoded skill list. Discover whether a newer, more specialized skill exists before doing the work.',
     'Step 1 — Local scan: inspect available skill metadata in .claude/skills, .codex/skills, .agents/skills, and globally installed skill folders. Match by name and description, not by filename only.',
@@ -250,10 +282,10 @@ function getSkillDiscoveryProtocol(task, domains, platforms = []) {
   ];
 }
 
-function getAgentCouncil(task, mode) {
+function getAgentCouncil(task, mode, complexity, options) {
   const lower = task.toLowerCase();
   const agents = [];
-  const add = (name, mission, output) => agents.push({ name, mission, output });
+  const add = (name, mission, output) => agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
 
   if (/design|ui|ux|dashboard|page|screen|visual|layout/.test(lower)) {
     add(
@@ -346,11 +378,11 @@ function getAgentCouncil(task, mode) {
   return agents;
 }
 
-function getUniversalAgentRoster(task, mode, platforms = []) {
+function getUniversalAgentRoster(task, mode, platforms = [], complexity, options) {
   const agents = [];
   const add = (role, owns, when, deliverable) => {
     if (agents.some(agent => agent.role === role)) return;
-    agents.push({ role, owns, when, deliverable });
+    agents.push({ role, owns, when, deliverable, model: selectModel(task, complexity, options) });
   };
 
   add(

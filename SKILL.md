@@ -11,6 +11,39 @@ Turn vague user requests into precise, paste-ready orchestration prompts. A prof
 
 Prompt Builder does not do the requested engineering/design work itself. It prepares the next-agent prompt that says which skills to discover, install/load if needed, call, and how to use their outputs. For review requests, require evidence first and never let the prompt claim success upfront.
 
+## Quick Start
+
+```bash
+# Default — mode and platform auto-detected
+node bin/prompt-builder.js "review admin dashboard and confirm that all working"
+
+# Explicit mode
+node bin/prompt-builder.js --mode design-review "review checkout screen"
+node bin/prompt-builder.js --mode security-review "audit auth flow"
+node bin/prompt-builder.js --mode performance-review "why is this slow"
+
+# Platform override
+node bin/prompt-builder.js --platform ios "review login screen"
+
+# Stack profile cache
+node bin/prompt-builder.js --init-stack-profile --stack nextjs
+node bin/prompt-builder.js --refresh-stack-profile "review admin dashboard"
+node bin/prompt-builder.js --no-stack-cache "one-off prompt"
+
+# Output formats
+node bin/prompt-builder.js --compact "add timer"           # minimal
+node bin/prompt-builder.js --json "fix bug"                 # JSON
+node bin/prompt-builder.js --save prompt.txt "refactor api" # save to file
+node bin/prompt-builder.js --print-skills-only "design card" # skills only
+
+# Lists
+node bin/prompt-builder.js --list-modes
+node bin/prompt-builder.js --list-stacks
+
+# Validate a generated prompt file
+node scripts/validate.js prompt.txt
+```
+
 ## Intent Routing
 
 Classify the task before writing the prompt:
@@ -59,15 +92,34 @@ The generated prompt must include these rules:
 
 Every generated prompt should require the next agent to:
 
-1. Search installed skill metadata under `.claude/skills`, `.codex/skills`, `.agents/skills`, and global user skill folders.
-2. Invoke `find-skills` when available.
-3. If network/tooling is available, search the open ecosystem with `npx skills find "<task keywords>"`.
-4. Verify quality before recommending: task fit, source reputation, install count, clear `SKILL.md`, and direct workflow value.
-5. If a better skill is found, recommend:
+1. Check `.prompt-builder/stack-profiles/<stack>.md` first.
+2. If the MD exists, read it and do not repeat broad local/ecosystem skill discovery.
+3. If the MD is missing, generate it from bundled stack intelligence, installed skill metadata, required skills, missing skills, and refresh queries.
+4. Search installed skill metadata under `.claude/skills`, `.codex/skills`, `.agents/skills`, and global user skill folders only when no fresh stack profile exists or refresh is requested.
+5. Invoke `find-skills` when available and the stack profile says a stronger skill is needed.
+6. If network/tooling is available and refresh is requested, search the open ecosystem with `npx skills find "<task keywords>"`.
+7. Verify quality before recommending: task fit, source reputation, install count, clear `SKILL.md`, and direct workflow value.
+8. If a better skill is found, recommend:
    - `npx skills add <package> -g -y`
    - `/reload-skills`
    - the exact prompt command to rerun with that skill.
-6. If no better skill exists or installation is not approved, continue with the best installed skills and state that discovery found no stronger option.
+9. If no better skill exists or installation is not approved, continue with the best installed skills and state that discovery found no stronger option.
+
+## Stack Profile Cache
+
+Version 1.5.1 adds a project-local cache so prompt generation does not spend tokens repeating the same stack/skill discovery on every run.
+
+Default CLI behavior:
+
+- Detect stack/platform from the task and optional `--stack`, `--platform`, `--backend`, or `--database` flags.
+- Look for `.prompt-builder/stack-profiles/<stack>.md`.
+- If the MD exists, mark cache `HIT`, tell the next agent to read it, and skip broad skill search.
+- If the MD is missing, create it before building the prompt.
+- The MD includes stack context, best practices, anti-patterns, verification gates, required skills, installed skill matches, missing approval-required skills, and ecosystem refresh queries.
+- Use `--refresh-stack-profile` when stack/tooling changes.
+- Use `--no-stack-cache` only when a one-off prompt should ignore project cache.
+
+Skill installation rule: generated MD files may include commands such as `npx skills add <skill> -g -y`, but they are recommendations only. The acting agent must ask the user before running any install command.
 
 ## Universal Platform Coverage
 
@@ -127,36 +179,6 @@ Matched skills should usually include:
 - `browser-qa` for runtime UI verification
 - `verification-loop` for build/type/lint/test gates
 
-## CLI
-
-Use the bundled generator when the user wants command output:
-
-```bash
-# Default (auto-detect mode)
-node bin/prompt-builder.js "review admin dashboard and confirm that all working"
-
-# Explicit mode
-node bin/prompt-builder.js --mode design-review "review checkout screen"
-node bin/prompt-builder.js --mode security-review "audit auth flow"
-node bin/prompt-builder.js --mode performance-review "why is this slow"
-
-# Platform override
-node bin/prompt-builder.js --platform ios "review login screen"
-
-# Output formats
-node bin/prompt-builder.js --compact "add timer"           # minimal
-node bin/prompt-builder.js --json "fix bug"                 # JSON
-node bin/prompt-builder.js --save prompt.txt "refactor api" # save to file
-node bin/prompt-builder.js --print-skills-only "design card" # skills only
-
-# Lists
-node bin/prompt-builder.js --list-modes
-node bin/prompt-builder.js --list-stacks
-
-# Validate a generated prompt file
-node scripts/validate.js prompt.txt
-```
-
 ## Multica-Style Orchestration
 
 Use a managed-agent task-board style:
@@ -190,4 +212,7 @@ Every generated prompt should include:
 | `release-check` | release, deploy, ship | Release readiness |
 | `prd-to-tasks` | prd, spec, break into tasks | PRD decomposition |
 
-Use `REFERENCE.md` only when deeper prompt theory or template examples are needed.
+## Next Steps
+
+- **Need a fast lookup?** → See [QUICKREF.md](./QUICKREF.md) for flags tables, script maps, and validation scoring.
+- **Need deep theory, templates, and extension points?** → See [REFERENCE.md](./REFERENCE.md) for CCAP patterns, agent orchestration mechanics, and checklists.
