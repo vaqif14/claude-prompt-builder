@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6] - 2026-06-05
+
+Real-world test (backend code-quality task) surfaced routing/scoring gaps; closed them.
+
+### Fixed
+
+- **Quality-vs-bug routing**: "fix the code quality / best-practice deviations" now routes to
+  `refactor`, not `bugfix`. The bare word "fix" no longer forces bugfix when the task is a
+  quality/best-practice/smell/tech-debt/cleanup sweep — unless there is an acute-bug signal
+  (broken / crash / throws / failing / exception). Whole-stack.
+- **Complexity underestimation**: a single-domain refactor / security / performance / migration
+  task is no longer scored `Low` (which selected Haiku). Depth signals lift it to at least
+  `Medium` → Sonnet, so quality work does not get the cheapest model.
+- **Validator multi-word stack bug**: the stack-specific-discovery check used `[a-z-]+`, which
+  rejected spaces, so multi-word stacks ("spring boot best practices", "ruby rails", "react
+  native") failed the check and scored 95 instead of 100. Now allows spaces.
+
 ## [1.5.5] - 2026-06-05
 
 Real-world test (bidder product-list audit) surfaced gaps; this release closes them.

@@ -93,6 +93,15 @@ test('universal roster binds a skill to every agent', () => {
   for (const a of roster) assert(a.skill && a.skill.length, `agent ${a.role} missing skill`);
 });
 
+// Depth signals keep refactor/security/perf tasks off the cheapest model tier
+test('analyzeTask: a refactor task is at least Medium complexity (not Low)', () => {
+  assert.notStrictEqual(analyzeTask('refactor backend service for best practices').complexity, 'Low');
+});
+
+test('analyzeTask: a security review is at least Medium complexity', () => {
+  assert.notStrictEqual(analyzeTask('security review of the auth flow').complexity, 'Low');
+});
+
 // Trusted-source internet discovery appears when no cached profile exists
 test('skill discovery protocol restricts internet research to trusted sources', () => {
   const proto = getSkillDiscoveryProtocol('review api', [], [], 'spring-boot', null).join('\n');

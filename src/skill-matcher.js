@@ -107,11 +107,15 @@ function analyzeTask(task) {
   const hasMultiplePlatforms = /\b(?:and|plus|with|integrate|between)\b|\+/.test(lower);
   const hasArchitecturalTerms = /\b(?:architecture|hexagonal|domain|event sourcing|microservices?)\b/.test(lower);
   const hasLargeScope = /\b(?:all|every|entire|full|whole|complete)\b/.test(lower);
+  // Depth signals: even a single-domain task is non-trivial if it is a refactor, a
+  // quality/best-practice sweep, a security/perf review, or a migration. Keep these off
+  // the cheapest model tier.
+  const hasDepthSignal = /\b(?:refactor|rewrite|modernize|code quality|best[ -]practices?|smells?|maintainability|tech(?:nical)? debt|security|vulnerability|migrate|migration|performance)\b/.test(lower);
 
   let complexity = 'Low';
   if (domainCount >= 4 || hasArchitecturalTerms || (hasMultiplePlatforms && domainCount >= 2)) {
     complexity = 'High';
-  } else if (domainCount >= 2 || hasLargeScope) {
+  } else if (domainCount >= 2 || hasLargeScope || hasDepthSignal) {
     complexity = 'Medium';
   }
 

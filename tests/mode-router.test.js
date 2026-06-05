@@ -113,4 +113,21 @@ test('inferMode guard: "review admin dashboard" stays audit (no design token)', 
   assert.strictEqual(inferMode('review admin dashboard'), 'audit');
 });
 
+// Quality-vs-bug guard: "fix code quality / best practice" is refactor, not bugfix
+test('inferMode: "backend code quality is weak, fix best-practice deviations" is refactor', () => {
+  assert.strictEqual(inferMode('backend code quality is weak, fix best-practice deviations'), 'refactor');
+});
+
+test('inferMode: "clean up technical debt" is refactor', () => {
+  assert.strictEqual(inferMode('clean up technical debt'), 'refactor');
+});
+
+test('inferMode guard: "fix login crash" stays bugfix (acute bug beats quality guard)', () => {
+  assert.strictEqual(inferMode('fix login crash'), 'bugfix');
+});
+
+test('inferMode guard: "fix the failing payment bug" stays bugfix', () => {
+  assert.strictEqual(inferMode('fix the failing payment bug'), 'bugfix');
+});
+
 console.log('');

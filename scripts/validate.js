@@ -14,9 +14,9 @@ function validatePrompt(promptText) {
   // 1. Skill Discovery (12 pts)
   const hasSkillDiscovery = /Skill Discovery Preflight/i.test(p) &&
     /local scan|ecosystem scan|npx skills find|stack profile cache|cached stack profile/i.test(p);
-  const hasStackSpecificDiscovery = /npx skills find "[a-z-]+ best practices"/i.test(p) ||
-    /npx skills find "[a-z-]+ security review"/i.test(p) ||
-    /npx skills find "[a-z-]+ testing review"/i.test(p) ||
+  const hasStackSpecificDiscovery = /npx skills find "[a-z -]+ best practices"/i.test(p) ||
+    /npx skills find "[a-z -]+ security review"/i.test(p) ||
+    /npx skills find "[a-z -]+ testing review"/i.test(p) ||
     /Stack profile cache:\s*(HIT|MISS|REFRESHED)/i.test(p);
   checks.push({ pass: hasSkillDiscovery, label: 'Skill discovery preflight present', points: 7 });
   checks.push({ pass: hasStackSpecificDiscovery, label: 'Stack-specific skill discovery queries', points: 5 });

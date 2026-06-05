@@ -349,6 +349,14 @@ function inferMode(task, explicitMode) {
   if (explicitMode && MODES[explicitMode]) return explicitMode;
 
   const lower = task.toLowerCase();
+
+  // Quality-vs-bug guard: a "fix the code quality / best-practice deviations" task is a
+  // refactor, not a bugfix — the bare word "fix" must not route it to bugfix unless there
+  // is an actual acute-bug signal (something broken/throwing/failing).
+  const qualitySignal = /\b(?:code quality|best[ -]practices?|smells?|maintainability|readability|tech(?:nical)? debt|clean ?up|deviations?|modernize)\b/.test(lower);
+  const acuteBug = /\b(?:bug|bugs|broken|crash(?:es|ed|ing)?|error|errors|exception|regression|stack ?trace|throws?|fails?|failing|failure|npe|500)\b/.test(lower);
+  if (qualitySignal && !acuteBug) return 'refactor';
+
   // Order matters: check specific modes before general ones to avoid false positives
   const modeOrder = [
     'design-review', 'architecture-review', 'security-review', 'performance-review',
