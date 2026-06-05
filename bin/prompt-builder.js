@@ -55,7 +55,7 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--model')} <model> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override model selection (haiku, sonnet, opus)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--session-id')} <id> "${chalk.yellow('<task>')}"                    ${chalk.gray('# Resume existing session')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--list-sessions')}                                   ${chalk.gray('# Show recent sessions')}
-  ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 4500)')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 5500)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--full')} "${chalk.yellow('<task>')}"                                ${chalk.gray('# Disable token compression')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage breakdown')}
 
@@ -137,7 +137,7 @@ function parseArgs(args) {
     listSessions: false,
     model: null,
     help: false,
-    maxTokens: 4500,
+    maxTokens: 5500,
     contextReport: false,
   };
 

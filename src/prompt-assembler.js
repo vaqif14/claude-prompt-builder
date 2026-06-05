@@ -10,6 +10,7 @@ const { getModeConfig } = require('./mode-router');
 const { ensureStackProfile } = require('./stack-cache');
 const { selectModel } = require('./model-router');
 const { sanitizeCsvValue, neutralizeUserText } = require('./sanitize');
+const { groundInRepo } = require('./codebase-grounding');
 
 function parseRows(file) {
   if (!fs.existsSync(file)) return [];
@@ -121,6 +122,13 @@ function generatePrompt(task, options = {}) {
     isCli: platformIds.includes('cli'),
   };
 
+  // Codebase grounding: when a real repo path is given, read it and inject concrete
+  // file:line targets, the real build/test commands, the detected stack, and the
+  // project's own invariants — the differentiator vs a generic prompt builder.
+  const groundingPrefer = surface.isUi && !surface.isService ? 'js'
+    : surface.isService && !surface.isUi ? 'jvm' : null;
+  const grounding = options.cwd ? groundInRepo({ cwd: options.cwd, task, prefer: groundingPrefer }) : { grounded: false };
+
   const dataDir = path.join(__dirname, '..', 'data');
 
   verifyDataIntegrity(dataDir);
@@ -212,6 +220,40 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  if (grounding.grounded) {
+    const g = grounding;
+    const lines = [
+      '═══════════════════════════════════════════════════════════════',
+      '  GROUNDED TARGETS — auto-detected from the repo (verify before trusting)',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+    ];
+    if (g.stack && g.stack.length) lines.push(`Detected stack: ${g.stack.join(', ')}`, '');
+    if (g.build) {
+      const cmds = [];
+      if (g.build.typecheck) cmds.push(`typecheck=${g.build.typecheck}`);
+      if (g.build.lint) cmds.push(`lint=${g.build.lint}`);
+      if (g.build.test) cmds.push(`test=${g.build.test}`);
+      if (g.build.build) cmds.push(`build=${g.build.build}`);
+      lines.push(`Build tool: ${g.build.tool}${g.build.dir ? ` (in ${g.build.dir})` : ''}`);
+      lines.push(`Real commands: ${cmds.join(' | ') || 'detect from project'}`, '');
+    }
+    if (g.targets && g.targets.length) {
+      lines.push(
+        g.targetsBySize
+          ? 'Likely refactor candidates (ranked by lines of code, not task-matched — confirm relevance before acting):'
+          : 'Likely target files (ranked by task match — confirm the right one):',
+        ...g.targets.map(t => `  • ${t}`), '');
+    } else if (g.roots && g.roots.length) {
+      lines.push(`No single surface matched the task wording — scan these source roots: ${g.roots.join(', ')}`, '');
+    }
+    if (g.invariants && g.invariants.length) {
+      lines.push('Project invariants / hard rules (from CLAUDE.md/AGENTS.md — do NOT weaken):', ...g.invariants.map(i => `  • ${i}`), '');
+    }
+    lines.push('These are heuristic detections — confirm each file:line, and resolve any "redirect/stub" or "barrel/re-export" note to the true implementation before acting.', '');
+    promptSections.push({ name: 'GROUNDED TARGETS', lines });
+  }
+
   promptSections.push({
     name: 'GROUNDING CONTRACT',
     lines: [
@@ -219,8 +261,10 @@ function generatePrompt(task, options = {}) {
       '  GROUNDING CONTRACT — RESOLVE BEFORE EXECUTING',
       '═══════════════════════════════════════════════════════════════',
       '',
-      'This prompt is generated from heuristics and is NOT yet grounded in the target repo.',
-      'Before doing the work, read the actual codebase and resolve these to real file:line targets:',
+      ...(grounding.grounded
+        ? ['Concrete detections are in GROUNDED TARGETS above — verify each, then additionally resolve these to real file:line:']
+        : ['This prompt is generated from heuristics and is NOT yet grounded in the target repo.',
+           'Before doing the work, read the actual codebase and resolve these to real file:line targets:']),
       ...buildGroundingSlots(surface),
       '',
       'Do not begin work, and do not present a verdict, until these are resolved to concrete paths.',
@@ -304,11 +348,8 @@ function generatePrompt(task, options = {}) {
       '',
       ...analysis.domains.map(d => `  • ${d.skill} (${d.domain}) — ${d.priority} priority`),
       '',
-      'Required Skills To Invoke:',
-      ...skillPlan.map((item, index) => `  ${index + 1}. ${item.skill} — ${item.reason}`),
-      '',
-      'Skill Execution Order:',
-      ...skillPlan.map((item, index) => `  ${index + 1}. Invoke ${item.skill}: ${item.instruction}`),
+      'Required Skills To Invoke (in this order):',
+      ...skillPlan.map((item, index) => `  ${index + 1}. ${item.skill} — ${item.reason}. ${item.instruction}`),
       '',
       'Rule: Do not continue with the audit/build until each relevant skill above has been invoked, marked unavailable with a reason, or marked N/A (not applicable to this task\'s scope) — invoke only what the task actually needs.',
       'Rule: Do not claim a skill was used unless its guidance was actually loaded/read or its workflow was followed.',
@@ -331,9 +372,6 @@ function generatePrompt(task, options = {}) {
       'Parallelization Rule: run cards with the same dependency in parallel only if they touch different files/surfaces or are read-only review passes.',
       'Conflict Rule: if two agents need to edit the same file, Coordinator must serialize the work and assign one owner.',
       'Handoff Rule: every agent must return findings, touched files, evidence, blockers, and recommended next task.',
-      '',
-      'Universal Agent Roster (each agent → its required skill):',
-      ...universalAgentRoster.map(agent => `  • ${agent.role}: skill=${agent.skill}; owns=${agent.owns}; when=${agent.when}; deliverable=${agent.deliverable}`),
       '',
     ],
   })
@@ -526,7 +564,7 @@ function generatePrompt(task, options = {}) {
     s.priority = critical.has(s.name) ? 0 : (SECTION_PRIORITIES[s.name] ?? 1)
   }
 
-  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 4500 : options.maxTokens)
+  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 5500 : options.maxTokens)
   let finalSections = promptSections
   let budget = null
 

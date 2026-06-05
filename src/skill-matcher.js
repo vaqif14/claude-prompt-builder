@@ -276,7 +276,7 @@ function getSkillSearchQueries(task, domains, platforms = [], stack = '') {
   }
 
   if (queries.size === 0) queries.add(sanitizeShellArg(task) || 'software project best practices');
-  return [...queries].slice(0, 8);
+  return [...queries].slice(0, 5);
 }
 
 function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', stackProfile = null) {

@@ -4,6 +4,37 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-05
+
+Codebase-grounding release. The criticism: "the prompt is still generic — any ChatGPT prompt
+builder does this; it must be grounded in the actual codebase." Adversarial review of the
+generic output scored 58/100. This release makes the CLI actually read the target repo, and the
+grounded output re-scored with the "too generic" criticism resolved.
+
+### Added
+
+- **`src/codebase-grounding.js`** — when a real repo path is given (the CLI passes `cwd`), the
+  generator now READS the repo and injects a **GROUNDED TARGETS** section with concrete facts:
+  - **Real target files** matched to the task tokens (e.g. `(bidder)/products/page.tsx` flagged as
+    a redirect stub → resolve to `(bidder)/auctions/page.tsx`); for token-less tasks (e.g. "fix code
+    quality") it falls back to the largest/most-complex files **ranked by lines of code** (the real
+    god-classes — e.g. `AdminController.java` 1131 lines — not "scan these source roots").
+  - **Detected stack with versions** from package.json + build.gradle (Next.js 16.2.6, MUI 7.3.6,
+    Spring Boot, Spring Security, LDAP, Flyway, Java 17 …) instead of "component library of choice".
+  - **Real build/test/lint commands** detected from the lockfile/build file, surface-preference
+    aware (a frontend task gets `pnpm typecheck/lint/test`; a backend task gets `./gradlew …`).
+  - **Project invariants** quoted from CLAUDE.md/AGENTS.md (bid row locking, idempotency,
+    timer/leader rules, append-only audit), with wrapped multi-line rules joined (no truncation).
+
+### Fixed
+
+- GROUNDING CONTRACT no longer claims "NOT yet grounded" when concrete targets were detected;
+  it references GROUNDED TARGETS and lists only what still needs resolving.
+- Trimmed redundancy flagged in review: merged the duplicate "Required Skills" + "Skill Execution
+  Order" lists into one, dropped the Universal Agent Roster (duplicate of the task board), and cut
+  the skill-discovery queries from 8 to 5. Default budget raised to 5500 for the richer grounded
+  brief; validator length ceiling widened accordingly.
+
 ## [1.6.0] - 2026-06-05
 
 Platform-awareness release. An adversarial agent review of a backend code-quality prompt

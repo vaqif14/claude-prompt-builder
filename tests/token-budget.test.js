@@ -18,16 +18,16 @@ function test(name, fn) {
 
 console.log('\nToken Budget Tests');
 
-test('default prompt stays within the 4500 token budget', () => {
+test('default prompt stays within the 5500 token budget', () => {
   const result = generatePrompt('review admin dashboard and confirm all working');
-  assert(estimateTokens(result.prompt) <= 4500, `Expected <=4500 tokens, got ${estimateTokens(result.prompt)}`);
+  assert(estimateTokens(result.prompt) <= 5500, `Expected <=5500 tokens, got ${estimateTokens(result.prompt)}`);
   assert(result.validation.score >= 90, `Expected strong validation score, got ${result.validation.score}`);
 });
 
 test('full option disables token compression', () => {
-  const compact = generatePrompt('review admin dashboard and confirm all working');
+  const compact = generatePrompt('review admin dashboard and confirm all working', { maxTokens: 1500 });
   const full = generatePrompt('review admin dashboard and confirm all working', { full: true });
-  assert(estimateTokens(full.prompt) > estimateTokens(compact.prompt), 'Expected full prompt to be larger than compact prompt');
+  assert(estimateTokens(full.prompt) > estimateTokens(compact.prompt), 'Expected full prompt to be larger than a compressed prompt');
 });
 
 console.log('');

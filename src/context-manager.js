@@ -9,6 +9,7 @@
 // duplicate these numbers inline in the assembler.
 const SECTION_PRIORITIES = {
   'SYSTEM CONTRACT': 0,
+  'GROUNDED TARGETS': 0,
   'GROUNDING CONTRACT': 0,
   'WRITE SAFETY GATE': 0,
   'CONTEXT WINDOW': 1,
