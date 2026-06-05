@@ -55,7 +55,7 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--model')} <model> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override model selection (haiku, sonnet, opus)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--session-id')} <id> "${chalk.yellow('<task>')}"                    ${chalk.gray('# Resume existing session')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--list-sessions')}                                   ${chalk.gray('# Show recent sessions')}
-  ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 5500)')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 6000)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--full')} "${chalk.yellow('<task>')}"                                ${chalk.gray('# Disable token compression')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage breakdown')}
 
@@ -107,6 +107,9 @@ function printMetadataCard(meta, validation) {
     chalk.gray('Solution').padEnd(16) + ' │ ' + (validation.solutionReadiness === 'ready'
       ? chalk.green('READY')
       : chalk.yellow(`${(validation.solutionReadiness || 'draft').toUpperCase()} — fill PROBLEM ANALYSIS from the code`)),
+    chalk.gray('Plan').padEnd(16) + ' │ ' + (validation.planReadiness === 'ready'
+      ? chalk.green('READY')
+      : chalk.yellow(`${(validation.planReadiness || 'draft').toUpperCase()} — fill TASK PLAN file:line + acceptance`)),
     chalk.gray('Agents').padEnd(16) + ' │ ' + chalk.white(meta.agents),
     chalk.gray('Read-only').padEnd(16) + ' │ ' + chalk.white(meta.readOnly ? 'Yes' : 'No'),
     chalk.gray('Stack Profile').padEnd(16) + ' │ ' + chalk.white(meta.stackProfile ? `${meta.stackProfile.status}: ${meta.stackProfile.path}` : 'Disabled'),
@@ -140,7 +143,7 @@ function parseArgs(args) {
     listSessions: false,
     model: null,
     help: false,
-    maxTokens: 5500,
+    maxTokens: 6000,
     contextReport: false,
   };
 
@@ -378,9 +381,9 @@ function main() {
   if (flags.save) {
     fs.writeFileSync(flags.save, result.prompt, 'utf-8');
     console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
-    console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Scaffold: ${result.validation.score}/100 | Solution: ${(result.validation.solutionReadiness || 'draft').toUpperCase()}`)}`);
-    if ((result.validation.solutionReadiness || 'draft') !== 'ready') {
-      console.log(`  ${chalk.yellow('→ DRAFT:')} ${chalk.gray('open the resolved targets, fill PROBLEM ANALYSIS (root cause + concrete fix), then this prompt is ready.')}`);
+    console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Scaffold: ${result.validation.score}/100 | Solution: ${(result.validation.solutionReadiness || 'draft').toUpperCase()} | Plan: ${(result.validation.planReadiness || 'draft').toUpperCase()}`)}`);
+    if ((result.validation.readiness || 'draft') !== 'ready') {
+      console.log(`  ${chalk.yellow('→ DRAFT:')} ${chalk.gray('read the resolved targets, fill PROBLEM ANALYSIS (root cause + fix) and TASK PLAN (file:line tasks + acceptance), then the prompt is ready.')}`);
     }
     if (result.metadata.stackProfile) {
       console.log(`  ${chalk.gray(`Stack profile: ${result.metadata.stackProfile.status} ${result.metadata.stackProfile.path}`)}`);

@@ -67,9 +67,15 @@ function validatePrompt(promptText) {
   const hasProblemSection = /PROBLEM ANALYSIS/i.test(p);
   checks.push({ pass: hasProblemSection, label: 'Problem-analysis & solution-direction section present', points: 6 });
 
+  // 7c. Detailed task plan (6 pts): spec-kit-style task rows (IDs + acceptance + deps), not generic
+  // verbs. Presence scored here; whether it is FILLED with real file:line is planReadiness below.
+  const hasTaskPlan = /TASK PLAN/i.test(p);
+  const hasTaskRows = /\b[TF]\d{2,3}\b/.test(p) && /acceptance:|evidence:|depends_on:/i.test(p);
+  checks.push({ pass: hasTaskPlan && hasTaskRows, label: 'Detailed task plan (IDs + acceptance + dependencies) present', points: 6 });
+
   // 8. Prompt Length (8 pts)
   const tokens = Math.ceil(p.length / 4);
-  const lengthOk = tokens > 200 && tokens < 6000;
+  const lengthOk = tokens > 200 && tokens < 6800;
   checks.push({ pass: lengthOk, label: 'Prompt within token budget', points: 8 });
 
   // 9. Stack Intelligence (v1.5.0) — 15 pts
@@ -110,6 +116,24 @@ function validatePrompt(promptText) {
   const solutionReadiness = !hasProblemSection ? 'missing'
     : (hasUnresolved || !hasConcreteLocation) ? 'draft' : 'ready';
 
+  // planReadiness is a SECOND, orthogonal axis: is the TASK PLAN filled? A prompt can have a filled
+  // diagnosis but an unfilled plan. Computed over the task-plan region. Read-only modes produce a
+  // findings ledger (a file ref without :line is acceptable there), so we relax the :line need when
+  // the plan is a ledger ([Sev]/evidence: present).
+  const planIdx = p.search(/TASK PLAN/i);
+  const planRegion = planIdx >= 0 ? p.slice(planIdx) : '';
+  const isLedger = /evidence:/i.test(planRegion) && !/depends_on:/i.test(planRegion);
+  const planUnresolved = /<RESOLVE/i.test(planRegion);
+  const planHasLocation = isLedger
+    ? /[\w./-]+\.[A-Za-z]{1,5}(:\d+)?/.test(planRegion)
+    : /[\w./-]+\.[A-Za-z]{1,5}:\d+/.test(planRegion);
+  const planReadiness = !hasTaskPlan ? 'missing'
+    : (planUnresolved || !planHasLocation) ? 'draft' : 'ready';
+
+  // Overall readiness: a prompt is only "ready" to hand off when BOTH the diagnosis and the plan
+  // are filled from real code.
+  const readiness = (solutionReadiness === 'ready' && planReadiness === 'ready') ? 'ready' : 'draft';
+
   return {
     checks,
     passed: checks.filter(c => c.pass).length,
@@ -119,6 +143,8 @@ function validatePrompt(promptText) {
     earnedPoints,
     totalPoints,
     solutionReadiness,
+    planReadiness,
+    readiness,
   };
 }
 
@@ -137,6 +163,14 @@ function formatReport(result) {
       : r === 'draft' ? 'PROBLEM ANALYSIS not filled — open the targets and write the root cause + fix'
         : 'no PROBLEM ANALYSIS section';
     out += `  ${bold}Solution:${reset} ${rColor}${r.toUpperCase()}${reset} — ${note}\n`;
+  }
+  if (result.planReadiness) {
+    const r = result.planReadiness;
+    const rColor = r === 'ready' ? '\x1b[32m' : '\x1b[33m';
+    const note = r === 'ready' ? 'task plan filled with file:line + acceptance'
+      : r === 'draft' ? 'TASK PLAN not filled — write file:line tasks + per-task acceptance from the code'
+        : 'no TASK PLAN section';
+    out += `  ${bold}Plan:${reset} ${rColor}${r.toUpperCase()}${reset} — ${note}\n`;
   }
   out += '\n';
 

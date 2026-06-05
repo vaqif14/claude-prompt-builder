@@ -4,6 +4,45 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-06
+
+Spec-kit-grade detail. Inspired by GitHub's spec-kit (Spec-Driven Development): the user wanted
+the generated prompt to "write everything in detail, page by page, so I don't have to navigate
+the codebase myself." A three-agent council analyzed spec-kit and converged: adopt its `tasks.md`
+*discipline* (atomic, phased, dependency-ordered tasks with exact file:line, `[P]` parallel
+markers, per-task acceptance, checkpoints) and reject the rest (tech-agnostic WHAT-not-HOW specs,
+constitution re-derivation, multi-file fan-out) — because our differentiator is being grounded in
+the real code, not abstracting away from it.
+
+### Added
+
+- **`TASK PLAN` section** replaces the old generic `EXECUTION PLAN` (six vague verbs like "apply
+  refactor in small steps"). It is a spec-kit-style, mode-shaped task list:
+  - **write modes** → phased edit tasks: `[ID] [P?] <desc> → <file:line> | depends_on: <ids> |
+    acceptance: <Given/When/Then or named test>`, with per-phase checkpoints. Phases are
+    mode-specific (refactor: Characterize→Extract→Verify; bugfix: Reproduce→Fix→Regress;
+    feature: Setup→US1→US2→Polish).
+  - **read-only modes** (audit/reviews) → a **findings ledger** (`[ID] [Sev] <finding> →
+    evidence: … | rec: …`), never edit tasks.
+  - **feature mode** also prepends a compact `US / FR-001 / SC-001` spec micro-block (new code
+    has no existing implementation to ground every requirement against).
+  - The CLI emits the phase skeleton + `<RESOLVE>` rows; the SKILL fills the real file:line,
+    dependencies, and acceptance from code it reads — same division of labor as PROBLEM ANALYSIS.
+- **`planReadiness` axis** (DRAFT/READY) alongside `solutionReadiness`, plus a combined `readiness`
+  that is READY only when BOTH the diagnosis and the task plan are filled. Surfaced in the CLI
+  summary (`Solution: … | Plan: …`) and the validation report so a scaffold never reads as a
+  finished, hand-off-ready prompt.
+
+### Changed
+
+- SKILL.md Conclude hard-gate gains a fourth requirement: fill the TASK PLAN with real,
+  file-path'd, acceptance-bearing tasks (or a findings ledger for reviews) — a plan of generic
+  verbs or unfilled rows is unfinished. This is framed as the deliverable that lets the user act
+  without navigating the codebase themselves.
+- Default token budget 5500 → 6000 (and validator length ceiling raised) to fit the richer plan;
+  the CLI skeleton stays small (≤2 seed rows/phase) — growth is the SKILL's filled content.
+- Validator scores task-plan presence (IDs + acceptance + dependencies); +5 regression tests (114).
+
 ## [1.8.0] - 2026-06-06
 
 Solution-based prompts. A three-agent adversarial review of the real output reached a

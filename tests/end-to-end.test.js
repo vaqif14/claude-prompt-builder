@@ -112,6 +112,44 @@ test('unfilled CLI scaffold reports solutionReadiness=draft (the 100/100 is not 
     `expected draft (unfilled <RESOLVE>), got ${v.solutionReadiness}`);
 });
 
+test('every prompt carries a spec-kit-style TASK PLAN with task rows', () => {
+  for (const tc of TEST_CASES) {
+    const result = generatePrompt(tc.task, tc.options || {});
+    assert(/TASK PLAN/.test(result.prompt), `TASK PLAN missing in "${tc.name}"`);
+    assert(/\b[TF]\d{2,3}\b/.test(result.prompt), `no task/finding rows in "${tc.name}"`);
+  }
+});
+
+test('refactor task plan = edit tasks (depends_on); audit task plan = findings ledger (evidence)', () => {
+  const refactor = generatePrompt('refactor the payment service', {}).prompt;
+  const planR = refactor.slice(refactor.search(/TASK PLAN/));
+  assert(/T001/.test(planR) && /depends_on:/.test(planR), 'refactor plan should have T-rows + depends_on');
+
+  const audit = generatePrompt('audit the dashboard and confirm all working', {}).prompt;
+  const planA = audit.slice(audit.search(/TASK PLAN/));
+  assert(/F001/.test(planA) && /evidence:/.test(planA), 'audit plan should be a findings ledger (F-rows + evidence)');
+});
+
+test('feature mode prepends a US/FR/SC spec micro-block', () => {
+  const p = generatePrompt('add a saved-search feature', {}).prompt;
+  assert(/User stories:/.test(p) && /FR-001/.test(p) && /SC-001/.test(p), 'feature spec micro-block missing');
+});
+
+test('unfilled TASK PLAN reports planReadiness=draft; overall readiness draft', () => {
+  const v = validatePrompt(generatePrompt('refactor the payment service', {}).prompt);
+  assert.strictEqual(v.planReadiness, 'draft', `expected plan draft, got ${v.planReadiness}`);
+  assert.strictEqual(v.readiness, 'draft');
+});
+
+test('filled diagnosis + filled plan → planReadiness=ready and overall ready', () => {
+  let p = generatePrompt('refactor the payment service', {}).prompt;
+  p = p.replace(/<RESOLVE[^>]*>/g, 'src/PaymentService.java:142 — duplicated retry; extract retry() (PaymentServiceTest green)');
+  const v = validatePrompt(p);
+  assert.strictEqual(v.solutionReadiness, 'ready', `solution: ${v.solutionReadiness}`);
+  assert.strictEqual(v.planReadiness, 'ready', `plan: ${v.planReadiness}`);
+  assert.strictEqual(v.readiness, 'ready');
+});
+
 test('a filled prompt (real path:line, no <RESOLVE>) reports solutionReadiness=ready', () => {
   const result = generatePrompt('refactor the payment service', {});
   // simulate the SKILL filling the diagnostic center after reading the code

@@ -39,19 +39,25 @@ The skill does the work of understanding it **against the real codebase**, not j
    the orchestration prompt (sections below) — never a generic, placeholder prompt.
 
 **Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact (its own summary prints
-`Solution: DRAFT` until you fill it). Do NOT hand the prompt back while it is a draft:
+`Solution: DRAFT` and `Plan: DRAFT` until you fill them). Do NOT hand the prompt back while it is a draft:
 
-- Resolve every `GROUNDING CONTRACT` slot and the `<RESOLVE …>` markers to concrete `file:line`
+- Resolve every `GROUNDING CONTRACT` slot and the RESOLVE markers to concrete `file:line`
   targets you found by reading the repo. If the named entry point is a redirect / barrel /
   re-export, resolve to the true implementation first (e.g. a `page.tsx` that just `redirect()`s).
 - **Fill `PROBLEM ANALYSIS & SOLUTION DIRECTION` from code you actually read** — a real root
-  cause + a named, specific fix. A prompt whose PROBLEM ANALYSIS still contains `<RESOLVE …>`, or
+  cause + a named, specific fix. A prompt whose PROBLEM ANALYSIS still contains a RESOLVE marker, or
   that substitutes generic verbs ("identify the smell", "map the structure") for a real finding,
   is **unfinished — do not emit it**.
+- **Fill the `TASK PLAN` with real, file-path'd, acceptance-bearing tasks derived from the code you
+  read** — each task names a concrete `file:line`, its dependencies, and an observable acceptance
+  (Given/When/Then or a named test); read-only modes fill a findings ledger with evidence instead.
+  A plan of generic verbs ("apply refactor in small steps") or unfilled RESOLVE rows is unfinished.
+  This is what lets the user act without navigating the codebase themselves — it is the deliverable.
 - Detect the package manager / build tool from the lockfile and state the real verification commands.
 
 Goal: the user explains normally; the skill reads the code, names the actual problem and its fix,
-and hands back a ready, solution-grounded prompt — not a routing manifest.
+writes the detailed file-path'd task plan, and hands back a ready, solution-grounded prompt the user
+can act on without opening the codebase — not a routing manifest.
 
 ## Quick Start
 

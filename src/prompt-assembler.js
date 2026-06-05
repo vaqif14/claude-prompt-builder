@@ -86,6 +86,77 @@ function buildGroundingSlots(surface = {}) {
   return slots.map(s => `  • ${s}`);
 }
 
+// Mode-shaped phase skeletons for the TASK PLAN. We take spec-kit's tasks.md discipline
+// (atomic, phased, dependency-ordered tasks with exact file:line, [P] parallel markers, and
+// per-task acceptance + checkpoints) and reject the rest of its methodology — the CLI emits the
+// skeleton; the SKILL fills the file:line + acceptance from code it actually reads.
+const TASK_PLAN_PHASES = {
+  refactor: ['Characterize — pin current behavior with tests (no production edits)', 'Extract / split in small steps (one safe transform per task)', 'Verify no behavior change + cleanup'],
+  bugfix: ['Reproduce — a failing test that captures the bug', 'Minimal fix at the root cause', 'Regression-proof + verify'],
+  feature: ['Setup & contracts (entities / DTOs / migration stub)', 'User Story 1 (P1) — tests then implementation', 'User Story 2 (P2)', 'Polish & docs'],
+};
+const DEFAULT_TASK_PHASES = ['Setup & prerequisites', 'Core implementation', 'Verify & document'];
+
+// `<RESOLVE — …>` markers are filled by the SKILL after reading code (mirrors PROBLEM ANALYSIS).
+// Prose never contains the literal sentinel, so plan-readiness only trips on real, unfilled slots.
+function buildTaskPlan(mode, isReadOnly, specMicroBlock) {
+  const out = [
+    '═══════════════════════════════════════════════════════════════',
+    '  TASK PLAN — spec-kit detail; the prompt is NOT done while any RESOLVE marker remains',
+    '═══════════════════════════════════════════════════════════════',
+    '',
+  ];
+  if (isReadOnly) {
+    out.push(
+      'A read-only review has no edit tasks — it produces a findings ledger. Fill each marker from',
+      'evidence you actually collected (commands, file:line, screenshots). Recommend fixes as separate',
+      'tasks; do not edit in this pass.',
+      '',
+      'Legend: [ID] [Sev] <finding> → evidence: <cmd | file:line | screenshot> | rec: <fix as a separate task>',
+      '',
+      'Phase 1 — Evidence collection',
+      '  • What to inspect / commands to run: <RESOLVE — the concrete checks for this surface>',
+      'Phase 2 — Findings ledger',
+      '  [ ] F001 [Sev?] <RESOLVE — finding> → evidence: <RESOLVE — cmd/file:line/screenshot> | rec: <RESOLVE — fix as a separate task>',
+      '  [ ] F002 [Sev?] <RESOLVE — finding> → evidence: <RESOLVE> | rec: <RESOLVE>',
+      '  ── Checkpoint: every finding carries a severity and concrete evidence; no claim without proof.',
+      '',
+    );
+    return out;
+  }
+  if (specMicroBlock) {
+    out.push(
+      'Spec (fill from the intent + the code you read — keep it bound to real symbols, not generic):',
+      '  • User stories: US1 (P1) <RESOLVE — story + independent test>; US2 (P2) <RESOLVE>',
+      '  • Functional requirements: FR-001 <RESOLVE — MUST-phrased, testable>; FR-002 <RESOLVE>',
+      '  • Success criteria: SC-001 <RESOLVE — measurable, ties to an FR>',
+      '',
+    );
+  }
+  out.push(
+    'Phase skeleton is from the mode; YOU (having read the code) fill the description, file:line,',
+    'dependencies, and per-task acceptance. A row that still has a RESOLVE marker, or names no',
+    'concrete file, is unfinished. Mark [P] only when tasks touch different files with no shared dep.',
+    '',
+    'Legend: [ID] [P?] <description> → <file:line> | depends_on: <ids|none> | acceptance: <Given/When/Then or named test>',
+    '',
+  );
+  const phases = TASK_PLAN_PHASES[mode] || DEFAULT_TASK_PHASES;
+  let id = 1;
+  phases.forEach((phase, idx) => {
+    const pid = String(id).padStart(3, '0'); id++;
+    out.push(`Phase ${idx + 1} — ${phase}`);
+    out.push(`  [ ] T${pid} [P] <RESOLVE — task> → <RESOLVE — file:line> | depends_on: none | acceptance: <RESOLVE — Given/When/Then or named test>`);
+    if (idx === 0) {
+      const pid2 = String(id).padStart(3, '0'); id++;
+      out.push(`  [ ] T${pid2}    <RESOLVE — task> → <RESOLVE — file:line> | depends_on: T${pid} | acceptance: <RESOLVE>`);
+    }
+    out.push(`  ── Checkpoint: <RESOLVE — what is observably true/green after this phase>`);
+  });
+  out.push('', 'Dependency order: tests → models/contracts → services → endpoints/UI; parallelize only across files.', '');
+  return out;
+}
+
 function generatePrompt(task, options = {}) {
   const { inferMode } = require('./mode-router');
   const { detectPlatformsMixed, detectStack } = require('./platform-detector');
@@ -470,17 +541,11 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  // Keep the section key 'EXECUTION PLAN' (SECTION_PRIORITIES / budget refer to it); the body is
+  // now the spec-kit-style TASK PLAN. feature mode gets a small US/FR/SC spec micro-block.
   promptSections.push({
     name: 'EXECUTION PLAN',
-    lines: [
-      '═══════════════════════════════════════════════════════════════',
-      '  EXECUTION PLAN',
-      '═══════════════════════════════════════════════════════════════',
-      '',
-      'Sub-tasks:',
-      ...(sections.SubTasks || modeConfig.subTasks).map(t => `  - [ ] ${t}`),
-      '',
-    ],
+    lines: buildTaskPlan(mode, isReadOnly, mode === 'feature'),
   })
 
   promptSections.push({
@@ -617,7 +682,7 @@ function generatePrompt(task, options = {}) {
     s.priority = critical.has(s.name) ? 0 : (SECTION_PRIORITIES[s.name] ?? 1)
   }
 
-  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 5500 : options.maxTokens)
+  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 6000 : options.maxTokens)
   let finalSections = promptSections
   let budget = null
 
