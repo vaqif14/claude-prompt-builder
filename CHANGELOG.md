@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-06-05
+
+Closes the last two adversarial-review gaps.
+
+### Fixed
+
+- Removed the orphan "Data/DB Agent" from MODEL ASSIGNMENTS (it had a model row but no task-board
+  card / council role); MODEL ASSIGNMENTS now lists only the actual review-council agents.
+- Corrected generic stack facts that misfit real repos: API versioning now says "match the
+  project's scheme (e.g. /api/v1/)" instead of bare "/v1/"; Java-records guidance is scoped to DTOs
+  (not JPA entities) and warns a class→record change must preserve the serialized JSON contract.
+
 ## [1.7.0] - 2026-06-05
 
 Codebase-grounding release. The criticism: "the prompt is still generic — any ChatGPT prompt

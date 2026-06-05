@@ -1,7 +1,7 @@
 group,key,value
 Architecture,Pattern,Layered Controller → Service → Repository with DTOs
 Architecture,DI,Constructor injection (final fields)
-Architecture,Records,Use Java records for DTOs where possible
+Architecture,Records,Use Java records for DTOs where possible (not for JPA entities)
 Architecture,Validation,@Valid with Bean Validation on request DTOs
 Testing,Unit,JUnit 5 + Mockito (@ExtendWith(MockitoExtension))
 Testing,Integration,@SpringBootTest (in-memory DB or Testcontainers — per project; do not assume)
@@ -9,7 +9,7 @@ Testing,E2E,RestAssured / TestRestTemplate / MockMvc for API flows
 API,REST,@RestController with @GetMapping @PostMapping etc
 API,DTO,Request/response DTOs separate from entities
 API,Documentation,SpringDoc OpenAPI annotations
-API,Versioning,URL prefix /v1/ or custom header
+API,Versioning,Match the project's existing scheme (e.g. URL prefix /api/v1/ or a version header)
 Security,Auth,Spring Security; confirm the actual mechanism per project (LDAP / session / JWT / OAuth2)
 Security,Input,@Valid validation parameterized JPA queries
 Security,Headers,SecurityFilterChain with explicit CORS/CSRF decisions
@@ -19,7 +19,7 @@ Database,Connection,HikariCP pool env-driven never hardcode
 Evidence,Commands,./gradlew test ./gradlew bootRun
 Evidence,Runtime,Actuator health endpoints structured logging
 BestPractices,Layering,Controller → Service → Repository with DTOs
-BestPractices,Records,Use Java records for DTOs and immutable data
+BestPractices,Records,Use Java records for DTOs/immutable data; a class→record change must preserve the serialized JSON contract
 BestPractices,Validation,@Valid with Bean Validation on request DTOs
 BestPractices,Transactions,@Transactional on service boundaries; preserve existing rollback semantics
 BestPractices,Testing,JUnit 5 + Mockito; integration tests per the project's existing setup

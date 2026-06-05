@@ -95,7 +95,6 @@ function generatePrompt(task, options = {}) {
     getSkillDiscoveryProtocol,
     getSkillSearchQueries,
     getAgentCouncil,
-    getUniversalAgentRoster,
     getMulticaStyleTaskBoard,
     getDesignerRubric,
   } = require('./skill-matcher');
@@ -195,7 +194,6 @@ function generatePrompt(task, options = {}) {
   const skillDiscoveryProtocol = getSkillDiscoveryProtocol(task, analysis.domains, platforms, stack, stackProfile);
   const agentCouncil = getAgentCouncil(task, mode, analysis.complexity, options, surface);
   const designerRubric = getDesignerRubric(task);
-  const universalAgentRoster = getUniversalAgentRoster(task, mode, platforms, analysis.complexity, options);
   const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms);
 
   const isReadOnly = ['audit', 'design-review', 'architecture-review', 'security-review', 'performance-review', 'release-check'].includes(mode);
@@ -411,7 +409,6 @@ function generatePrompt(task, options = {}) {
       '',
       `Task complexity: ${analysis.complexity} | Default model: ${selectModel(task, analysis.complexity, options)}`,
       ...agentCouncil.map((agent, index) => `  ${index + 1}. ${agent.name} — ${agent.model} (${analysis.complexity} complexity)`),
-      ...universalAgentRoster.map((agent, index) => `  ${String.fromCharCode(97 + index)}. ${agent.role} — ${agent.model} (${analysis.complexity} complexity)`),
       `  Override: use --model <model> to force a specific model for all agents.`,
       '',
     ],
