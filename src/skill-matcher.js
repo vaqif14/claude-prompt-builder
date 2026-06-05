@@ -532,7 +532,7 @@ function getUniversalAgentRoster(task, mode, platforms = [], complexity, options
   return agents;
 }
 
-function getMulticaStyleTaskBoard(task, mode, platforms = []) {
+function getMulticaStyleTaskBoard(task, mode, platforms = [], surface = {}) {
   const taskType = ['audit', 'bugfix', 'refactor'].includes(mode)
     ? mode
     : (mode.endsWith('-review') || mode === 'release-check' ? 'review' : 'implementation');
@@ -591,7 +591,9 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
       title: 'Run verification gates and collect runtime evidence',
       status: 'todo',
       dependsOn: platforms.length ? platforms.filter(p => !p.isIntegrationLane).map((_, index) => `P${index + 1}`).join(', ') : 'T1',
-      artifact: 'commands run + results, test output, logs/traces; plus screenshots + console/network for UI surfaces',
+      artifact: surface.isUi
+        ? 'commands run + results, test output, logs/traces, plus screenshots + console/network for the UI surface'
+        : 'commands run + results, test output, logs/traces, query output',
     },
     {
       id: 'S1',

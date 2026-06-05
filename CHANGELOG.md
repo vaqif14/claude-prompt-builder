@@ -4,6 +4,41 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-06-06
+
+Grounding now DRIVES detection instead of sitting beside it. A real-user test (Azerbaijani
+task wording) exposed that the repo scan and the task-text heuristics never reconciled: the
+prompt would print "Detected stack: Next.js … Spring Boot" in GROUNDED TARGETS while the
+Stack / anti-pattern sections said "General software project — do NOT assume web frontend",
+and a frontend task got `./gradlew` build commands. This release makes the repo scan the
+source of truth.
+
+### Fixed
+
+- **Grounded surface drives stack / platform / build / model.** When the repo scan is
+  confident about a surface the task wording never named (casual or non-English text), that
+  surface is injected into detection so platform, stack profile, complexity, skills, council,
+  and the task board all re-derive consistently — no more "general / don't assume framework"
+  next to a fully detected stack. The bundled stack intelligence (spring-boot / nextjs CSVs)
+  now actually reaches the prompt instead of the generic fallback.
+- **Build commands match the target surface.** `groundInRepo` derives the build preference
+  from the resolved targets, so a frontend task in a dual-build monorepo gets `pnpm
+  typecheck/lint/test` and a backend task gets `./gradlew …` — the frontend-gets-Gradle bug
+  is gone.
+- **Stack-profile cache keyed by the resolved stack** (`nextjs.md`, `spring-boot.md`), not a
+  shared `general.md` — unrelated frontend and backend tasks no longer collide on one cache.
+- **Invariant extraction ranks by task relevance and qualifies by phrasing.** A bid refactor
+  now surfaces the locking / idempotency / consecutive-bid rules and an anonymity audit
+  surfaces the bidder-identity rule first. A bullet qualifies as an invariant only if it is
+  phrased as a prohibition/obligation — architecture lists, test-strategy bullets, bare file
+  paths, and tooling/skill notes that merely mention a domain noun are no longer mislabeled
+  as "hard rules".
+- **Complexity floor:** a task touching load-bearing invariants (locking, idempotency,
+  anonymity, money, timer, auth, migrations) is lifted off the cheapest model tier.
+- **Surface-aware target ranking + QA evidence:** a backend refactor no longer lists stray
+  frontend clients above the real service files, and its QA card asks for query output, not
+  screenshots.
+
 ## [1.7.1] - 2026-06-05
 
 Closes the last two adversarial-review gaps.

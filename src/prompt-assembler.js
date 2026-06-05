@@ -101,32 +101,59 @@ function generatePrompt(task, options = {}) {
 
   const mode = inferMode(task, options.mode);
   const template = options.template || mode;
-  const detectionTask = options.platform ? `${task} ${options.platform}` : task;
-  const stack = options.stack || detectStack(detectionTask);
+  const detectionTask0 = options.platform ? `${task} ${options.platform}` : task;
+
+  const UI_IDS = ['web', 'ios', 'android', 'flutter', 'react-native', 'desktop'];
+  const SERVICE_IDS = ['backend', 'node-express', 'nestjs', 'python', 'python-fastapi', 'python-django', 'ruby-rails', 'go', 'rust', 'dotnet', 'laravel', 'ai'];
+  const DATA_IDS = ['db', 'data-ml'];
+  const surfaceFromIds = (ids) => ({
+    isUi: ids.some(id => UI_IDS.includes(id)),
+    isService: ids.some(id => SERVICE_IDS.includes(id)),
+    isData: ids.some(id => DATA_IDS.includes(id)),
+    isCli: ids.includes('cli'),
+  });
+
+  // Codebase grounding: when a real repo path is given, READ the repo first and let it
+  // drive stack/platform/surface — the repo scan is more reliable than task-text keyword
+  // guessing (which misses casual or non-English wording). A cheap pre-detection only
+  // seeds the build preference for grounding's token-less fallback.
+  const preSurface = surfaceFromIds(detectPlatformsMixed(detectionTask0).map(p => p.id));
+  const prePrefer = preSurface.isUi && !preSurface.isService ? 'js'
+    : preSurface.isService && !preSurface.isUi ? 'jvm' : null;
+  const grounding = options.cwd ? groundInRepo({ cwd: options.cwd, task, prefer: prePrefer }) : { grounded: false };
+
+  // If grounding is confident about a surface the task wording never named, inject that
+  // surface keyword into the detection string so platform, stack, complexity, skills,
+  // council, and the task board all re-derive consistently — instead of contradicting
+  // GROUNDED TARGETS (e.g. an AZ-worded frontend task detected as "general").
+  let detectionTask = detectionTask0;
+  if (grounding.grounded && grounding.surface && grounding.surface.confident
+    && !(preSurface.isUi || preSurface.isService || preSurface.isData)) {
+    const word = grounding.surface.isUi ? 'frontend'
+      : grounding.surface.isService ? 'backend'
+        : grounding.surface.isData ? 'database' : '';
+    if (word) detectionTask = `${detectionTask0} ${word}`;
+  }
+
+  let stack = options.stack || detectStack(detectionTask);
+  // Repo-detected, surface-aligned stack wins over a generic keyword guess.
+  if (!options.stack && grounding.grounded && grounding.stackName && stack === 'general') {
+    stack = grounding.stackName;
+  }
   const platforms = detectPlatformsMixed(detectionTask);
   const analysis = analyzeTask(detectionTask);
   const modeConfig = getModeConfig(mode);
 
   // Surface kind drives platform-aware grounding, evidence, and review passes.
-  // A backend/service refactor must not get frontend-templated grounding slots,
-  // a "render with real data" evidence gate, or a Frontend Code Reviewer.
-  const platformIds = platforms.map(p => p.id);
-  const UI_IDS = ['web', 'ios', 'android', 'flutter', 'react-native', 'desktop'];
-  const SERVICE_IDS = ['backend', 'node-express', 'nestjs', 'python', 'python-fastapi', 'python-django', 'ruby-rails', 'go', 'rust', 'dotnet', 'laravel', 'ai'];
-  const DATA_IDS = ['db', 'data-ml'];
-  const surface = {
-    isUi: platformIds.some(id => UI_IDS.includes(id)),
-    isService: platformIds.some(id => SERVICE_IDS.includes(id)),
-    isData: platformIds.some(id => DATA_IDS.includes(id)),
-    isCli: platformIds.includes('cli'),
-  };
+  const surface = surfaceFromIds(platforms.map(p => p.id));
 
-  // Codebase grounding: when a real repo path is given, read it and inject concrete
-  // file:line targets, the real build/test commands, the detected stack, and the
-  // project's own invariants — the differentiator vs a generic prompt builder.
-  const groundingPrefer = surface.isUi && !surface.isService ? 'js'
-    : surface.isService && !surface.isUi ? 'jvm' : null;
-  const grounding = options.cwd ? groundInRepo({ cwd: options.cwd, task, prefer: groundingPrefer }) : { grounded: false };
+  // Complexity floor: a task touching load-bearing invariants (locking, idempotency,
+  // anonymity, money, timer, auth, migrations) is never trivial — keep it off Haiku.
+  let complexity = analysis.complexity;
+  if (grounding.grounded && complexity === 'Low'
+    && (grounding.invariants || []).some(i => /\b(anonym|locking|idempotenc|reserve|money|amount|timer|audit|auth|eligibilit|security|migration)\b/i.test(i))) {
+    complexity = 'Medium';
+  }
 
   const dataDir = path.join(__dirname, '..', 'data');
 
@@ -173,7 +200,7 @@ function generatePrompt(task, options = {}) {
     : [];
 
   const taskUnderstanding = inferTaskUnderstanding(task, mode, platforms);
-  const skillPlan = getSkillInvocationPlan(task, template, analysis.domains, platforms, analysis.complexity, options);
+  const skillPlan = getSkillInvocationPlan(task, template, analysis.domains, platforms, complexity, options);
   const skillQueries = getSkillSearchQueries(task, analysis.domains, platforms, stack);
   const stackProfile = options.stackProfile
     ? ensureStackProfile({
@@ -192,9 +219,9 @@ function generatePrompt(task, options = {}) {
       })
     : null;
   const skillDiscoveryProtocol = getSkillDiscoveryProtocol(task, analysis.domains, platforms, stack, stackProfile);
-  const agentCouncil = getAgentCouncil(task, mode, analysis.complexity, options, surface);
+  const agentCouncil = getAgentCouncil(task, mode, complexity, options, surface);
   const designerRubric = getDesignerRubric(task);
-  const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms);
+  const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms, surface);
 
   const isReadOnly = ['audit', 'design-review', 'architecture-review', 'security-review', 'performance-review', 'release-check'].includes(mode);
 
@@ -407,8 +434,8 @@ function generatePrompt(task, options = {}) {
       '  MODEL ASSIGNMENTS',
       '═══════════════════════════════════════════════════════════════',
       '',
-      `Task complexity: ${analysis.complexity} | Default model: ${selectModel(task, analysis.complexity, options)}`,
-      ...agentCouncil.map((agent, index) => `  ${index + 1}. ${agent.name} — ${agent.model} (${analysis.complexity} complexity)`),
+      `Task complexity: ${complexity} | Default model: ${selectModel(task, complexity, options)}`,
+      ...agentCouncil.map((agent, index) => `  ${index + 1}. ${agent.name} — ${agent.model} (${complexity} complexity)`),
       `  Override: use --model <model> to force a specific model for all agents.`,
       '',
     ],
@@ -615,7 +642,7 @@ function generatePrompt(task, options = {}) {
       template,
       stack,
       task,
-      complexity: analysis.complexity,
+      complexity,
       contextSize: promptText.length < 2000 ? 'Small' : promptText.length < 5000 ? 'Medium' : 'Large',
       platforms: platforms.map(p => p.id),
       domains: analysis.domains.map(d => d.domain),

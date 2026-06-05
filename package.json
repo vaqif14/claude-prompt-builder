@@ -1,6 +1,6 @@
 {
   "name": "@vaqif14/prompt-builder",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Skill-discovery prompt builder for coding agents. Turns vague tasks into expert prompt text that searches local and ecosystem skills, recommends install/load steps, and tells the next agent which specialist skills to invoke and what evidence to collect. Optimized for Claude Code and its skills ecosystem.",
   "main": "src/index.js",
   "bin": {

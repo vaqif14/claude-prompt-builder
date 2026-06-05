@@ -28,6 +28,13 @@ const STOPWORDS = new Set([
   'frontend', 'backend', 'app', 'apps', 'new', 'update', 'refactor', 'clean', 'design', 'visual',
 ]);
 
+// File-extension → surface kind. Used to derive the real surface (UI / service / data)
+// from the resolved target files, so build commands, stack profile, and platform align
+// with the repo instead of with task-text keyword guesses.
+const UI_EXT = new Set(['.tsx', '.jsx', '.vue', '.svelte']);
+const SERVICE_EXT = new Set(['.java', '.kt', '.kts', '.go', '.rs', '.cs', '.rb', '.php', '.py']);
+const DATA_EXT = new Set(['.sql']);
+
 function exists(cwd, rel) {
   try { return fs.existsSync(path.join(cwd, rel)); } catch (_) { return false; }
 }
@@ -77,6 +84,79 @@ function detectBuildAndTest(cwd, prefer) {
   if (prefer === 'js') return jsBuild(cwd) || jvmBuild(cwd);
   if (prefer === 'jvm') return jvmBuild(cwd) || jsBuild(cwd);
   return jvmBuild(cwd) || jsBuild(cwd);
+}
+
+// --- surface inference from the resolved targets ---------------------------
+// The repo scan is the source of truth: a task whose targets are all `.tsx` under
+// frontend/ is a UI task no matter how the request was worded (e.g. Azerbaijani text
+// that misses the English platform keywords). This drives prefer/build, stack, and
+// platform so they stop contradicting GROUNDED TARGETS.
+function surfaceFromTargets(targets) {
+  let ui = 0, service = 0, data = 0;
+  for (const t of targets || []) {
+    const f = String(t).split(' ')[0];
+    const ext = path.extname(f).toLowerCase();
+    const lower = f.toLowerCase();
+    if (UI_EXT.has(ext)) ui++;
+    else if (SERVICE_EXT.has(ext)) service++;
+    else if (DATA_EXT.has(ext)) data++;
+    else if (ext === '.ts' || ext === '.js' || ext === '.mjs' || ext === '.cjs') {
+      // Ambiguous JS/TS: a frontend client vs a node service — bias by path.
+      if (/(^|\/)(frontend|web|client|components?|pages?|features?|ui)(\/|$)/.test(lower)) ui++;
+      else service++;
+    }
+  }
+  return { ui, service, data };
+}
+
+function classifySurface(counts) {
+  const total = counts.ui + counts.service + counts.data;
+  if (!total) return null;
+  const max = Math.max(counts.ui, counts.service, counts.data);
+  const kind = max === counts.data && max > counts.service && max > counts.ui ? 'data'
+    : max === counts.service && max >= counts.ui ? 'service'
+      : 'ui';
+  return {
+    kind,
+    confident: max / total >= 0.6,
+    isUi: kind === 'ui',
+    isService: kind === 'service',
+    isData: kind === 'data',
+  };
+}
+
+// Map the detected stack to a bundled stack-profile CSV name, aligned to the surface
+// the work targets. Returns null when nothing maps cleanly (caller keeps its own guess).
+function detectServiceStackFromFiles(cwd) {
+  const pkgRel = ['backend/package.json', 'server/package.json', 'api/package.json', 'package.json'].find(r => exists(cwd, r));
+  if (pkgRel) {
+    let deps = {};
+    try { const p = JSON.parse(read(cwd, pkgRel)); deps = { ...(p.dependencies || {}), ...(p.devDependencies || {}) }; } catch (_) {}
+    if (deps['@nestjs/core']) return 'nestjs';
+    if (deps['express'] || deps['fastify'] || deps['koa']) return 'node-express';
+  }
+  const py = `${read(cwd, 'requirements.txt') || ''}\n${read(cwd, 'pyproject.toml') || ''}\n${read(cwd, 'Pipfile') || ''}`;
+  if (/\bdjango\b/i.test(py)) return 'python-django';
+  if (/\bfastapi\b/i.test(py)) return 'python-fastapi';
+  if (exists(cwd, 'go.mod')) return 'go';
+  if (exists(cwd, 'Cargo.toml')) return 'rust';
+  if (exists(cwd, 'composer.json') && /laravel/i.test(read(cwd, 'composer.json') || '')) return 'laravel';
+  if (exists(cwd, 'Gemfile') && /rails/i.test(read(cwd, 'Gemfile') || '')) return 'ruby-rails';
+  return null;
+}
+
+function pickStackName(cwd, stackList, kind) {
+  const has = (re) => (stackList || []).some(s => re.test(s));
+  if (kind === 'service') {
+    if (has(/Spring Boot/)) return 'spring-boot';
+    return detectServiceStackFromFiles(cwd);
+  }
+  if (kind === 'ui') {
+    if (has(/Next\.js/)) return 'nextjs';
+    if (has(/\bReact\b/)) return 'nextjs';
+    return null;
+  }
+  return null; // data / unknown: leave the caller's own stack detection in place
 }
 
 // --- detected stack from real manifests ------------------------------------
@@ -152,7 +232,9 @@ function walk(cwd, roots, opts = {}) {
   return files;
 }
 
-function findTargets(cwd, task, limit = 8) {
+// `prefer` ('js'|'jvm'|null) gently biases ranking toward the matching surface so a
+// backend refactor does not surface stray frontend clients above the real service files.
+function findTargets(cwd, task, limit = 8, prefer) {
   const tokens = tokenize(task);
   if (!tokens.length) return [];
   const roots = ['frontend/src', 'backend/src', 'src', 'app', 'lib', 'pkg', 'cmd', 'internal'];
@@ -164,6 +246,16 @@ function findTargets(cwd, task, limit = 8) {
     for (const t of tokens) if (lower.includes(t)) score += 1;
     // small bonus for being a page/route/index/service entry
     if (/(page|route|index|controller|service|handler)\.(t|j)sx?$|Controller\.(java|kt)$|Service\.(java|kt)$/.test(f)) score += 0.5;
+    // surface bias: nudge matches on the preferred surface above the other side of a monorepo
+    if (prefer) {
+      const ext = path.extname(f).toLowerCase();
+      const isUiFile = UI_EXT.has(ext) || /(^|\/)frontend\//.test(lower);
+      const isSvcFile = SERVICE_EXT.has(ext) || /(^|\/)backend\//.test(lower);
+      if (prefer === 'js' && isUiFile) score += 0.3;
+      if (prefer === 'jvm' && isSvcFile) score += 0.3;
+      if (prefer === 'js' && isSvcFile) score -= 0.2;
+      if (prefer === 'jvm' && isUiFile) score -= 0.2;
+    }
     if (score > 0) scored.push({ file: f, score });
   }
   scored.sort((a, b) => b.score - a.score || a.file.length - b.file.length);
@@ -180,14 +272,28 @@ function annotateTarget(cwd, file) {
 }
 
 // --- project invariants / hard rules from CLAUDE.md / AGENTS.md -------------
-function extractInvariants(cwd) {
+// Rank by relevance to the task (not document order) so a bid-refactor surfaces the
+// locking/idempotency rules and an anonymity audit surfaces the bidder-identity rule —
+// instead of whichever generic guardrail happens to appear first. Tooling/process notes
+// (skill descriptions, etc.) are filtered out; rules under hard-rule headings are boosted.
+// A bullet is an INVARIANT only by its phrasing (a prohibition/obligation), NOT merely
+// because it mentions a domain noun — otherwise architecture lists, test-strategy bullets,
+// and bare file paths that happen to say "bid"/"timer"/"audit" get pulled in as "rules".
+const INVARIANT_QUALIFY = /\b(do not|never|must not|must be|must stay|must always|cannot|may not|shall not|always (?:do|use|run|keep|preserve|enforce)|required\b|preserve\b|append-only|forbidden|prohibited|enforce|protection point|do not weaken|do not expose|do not log)\b/i;
+const INVARIANT_TOOLING = /\b(skill|superpowers|llm-council|claude code session|dispatching-parallel|find-skills|subagent|council)\b/i;
+const INVARIANT_HEAVY_HEADING = /(must not|never|bidding|bid rule|timer|security|audit|always do|invariant|concurrenc|realtime|anonym)/i;
+
+function extractInvariants(cwd, task) {
   const doc = read(cwd, 'CLAUDE.md') || read(cwd, 'AGENTS.md') || read(cwd, '.cursorrules') || '';
   if (!doc) return [];
   const lines = doc.split('\n');
   // Build full bullets, absorbing wrapped continuation lines so multi-line rules are
-  // not truncated mid-sentence.
+  // not truncated mid-sentence; remember the nearest heading for section weighting.
   const bullets = [];
+  let heading = '';
   for (let i = 0; i < lines.length; i++) {
+    const h = lines[i].match(/^#{1,6}\s+(.*)$/);
+    if (h) { heading = h[1].trim().toLowerCase(); continue; }
     const m = lines[i].match(/^\s*[-*]\s+(.*)$/);
     if (!m) continue;
     let text = m[1];
@@ -198,15 +304,33 @@ function extractInvariants(cwd) {
       j++;
     }
     i = j - 1;
-    bullets.push(text.replace(/[`*]/g, '').trim());
+    bullets.push({ text: text.replace(/[`*]/g, '').trim(), heading });
   }
+  const tokens = tokenize(task);
+  const scored = [];
+  for (const b of bullets) {
+    const text = b.text;
+    if (text.length <= 12 || text.length >= 280) continue;
+    if ((text.match(/\(/g) || []).length > (text.match(/\)/g) || []).length) continue; // truncated
+    if (!INVARIANT_QUALIFY.test(text)) continue;       // must be phrased as a rule, not a mention
+    if (INVARIANT_TOOLING.test(text)) continue;        // drop tooling / process notes, not real invariants
+    if (/\.(java|kt|tsx?|jsx?|go|rs|py|sql)\b/i.test(text) && text.length < 80) continue; // bare file path
+    let score = 0;
+    const tl = text.toLowerCase();
+    for (const t of tokens) if (tl.includes(t)) score += 3;            // task relevance dominates
+    if (INVARIANT_HEAVY_HEADING.test(b.heading)) score += 2;           // under a hard-rule heading
+    if (/\b(do not weaken|must not|never)\b/i.test(text)) score += 1;  // strongest phrasing
+    scored.push({ text, score });
+  }
+  // Highest relevance first; preserve document order within equal scores (stable).
+  const ordered = scored.map((s, idx) => ({ ...s, idx }))
+    .sort((a, b) => b.score - a.score || a.idx - b.idx);
   const out = [];
-  for (const text of bullets) {
-    if ((text.match(/\(/g) || []).length > (text.match(/\)/g) || []).length) continue;
-    if (/\b(do not weaken|never|do not|must not|always|append-only|idempotenc|locking|invariant|race condition)\b/i.test(text)
-      && text.length > 12 && text.length < 280) {
-      out.push(text);
-    }
+  const seen = new Set();
+  for (const c of ordered) {
+    if (seen.has(c.text)) continue;
+    seen.add(c.text);
+    out.push(c.text);
     if (out.length >= 8) break;
   }
   return out;
@@ -239,9 +363,8 @@ function findLargestFiles(cwd, roots, limit = 8) {
 function groundInRepo(input = {}) {
   const cwd = input.cwd || process.cwd();
   let build = null, targets = [], invariants = [], stack = [], roots = [], targetsBySize = false;
-  try { build = detectBuildAndTest(cwd, input.prefer); } catch (_) {}
-  try { targets = findTargets(cwd, input.task, input.limit || 8); } catch (_) {}
-  try { invariants = extractInvariants(cwd); } catch (_) {}
+  try { targets = findTargets(cwd, input.task, input.limit || 8, input.prefer); } catch (_) {}
+  try { invariants = extractInvariants(cwd, input.task); } catch (_) {}
   try { stack = detectStackFromDeps(cwd); } catch (_) {}
   // Token-less task → fall back to the largest files in the surface-relevant root,
   // which for a quality refactor are the most likely targets.
@@ -254,8 +377,15 @@ function groundInRepo(input = {}) {
       if (big.length) { targets = big; targetsBySize = true; }
     } catch (_) {}
   }
+  // Surface is inferred from the resolved targets (repo truth). The effective build
+  // preference honors an explicit caller prefer, else derives from the surface — so a
+  // frontend task gets pnpm and a backend task gets Gradle in a dual-build monorepo.
+  const surface = classifySurface(surfaceFromTargets(targets));
+  const prefer = input.prefer || (surface ? (surface.isUi ? 'js' : surface.isService ? 'jvm' : null) : null);
+  try { build = detectBuildAndTest(cwd, prefer); } catch (_) {}
+  const stackName = surface ? pickStackName(cwd, stack, surface.kind) : null;
   const grounded = Boolean(build || targets.length || invariants.length || stack.length || roots.length);
-  return { grounded, cwd, build, targets, targetsBySize, roots, invariants, stack };
+  return { grounded, cwd, build, targets, targetsBySize, roots, invariants, stack, surface, prefer, stackName };
 }
 
 module.exports = {
@@ -265,4 +395,7 @@ module.exports = {
   findTargets,
   extractInvariants,
   tokenize,
+  surfaceFromTargets,
+  classifySurface,
+  pickStackName,
 };

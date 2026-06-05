@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const {
   groundInRepo, detectBuildAndTest, detectStackFromDeps, findTargets, extractInvariants, tokenize,
+  surfaceFromTargets, classifySurface, pickStackName,
 } = require('../src/codebase-grounding');
 
 function test(name, fn) {
@@ -98,6 +99,58 @@ test('groundInRepo: falls back to source roots when no token match', () => {
   write(d, 'backend/src/Main.java', 'class Main {}');
   const g = groundInRepo({ cwd: d, task: 'improve overall quality' });
   assert(g.roots.includes('backend/src'), `expected backend/src root: ${g.roots}`);
+});
+
+test('surfaceFromTargets/classifySurface: tsx targets → ui, java → service', () => {
+  const ui = classifySurface(surfaceFromTargets(['a/page.tsx', 'b/Comp.tsx', 'c/x.jsx']));
+  assert.strictEqual(ui.kind, 'ui');
+  assert(ui.isUi && !ui.isService);
+  const svc = classifySurface(surfaceFromTargets(['x/Foo.java', 'y/Bar.java']));
+  assert.strictEqual(svc.kind, 'service');
+});
+
+test('groundInRepo: derives prefer from .tsx targets → JS build in a dual-build monorepo', () => {
+  const d = tmp();
+  // both build systems present; targets are frontend → must pick pnpm, not Gradle
+  write(d, 'build.gradle', 'plugins {}');
+  write(d, 'gradlew', '#!/bin/sh');
+  write(d, 'frontend/package.json', JSON.stringify({ scripts: { lint: 'next lint', test: 'vitest' } }));
+  write(d, 'frontend/pnpm-lock.yaml', 'lockfileVersion: 6');
+  write(d, 'frontend/src/app/bidder/auctions/page.tsx', 'export default function P(){return null}');
+  const g = groundInRepo({ cwd: d, task: 'review bidder auctions page' });
+  assert.strictEqual(g.surface.kind, 'ui', `surface: ${JSON.stringify(g.surface)}`);
+  assert.strictEqual(g.prefer, 'js');
+  assert.strictEqual(g.build.tool, 'pnpm', `build: ${JSON.stringify(g.build)}`);
+});
+
+test('pickStackName: maps detected stack to CSV name by surface', () => {
+  assert.strictEqual(pickStackName('/x', ['Spring Boot', 'Java 17'], 'service'), 'spring-boot');
+  assert.strictEqual(pickStackName('/x', ['Next.js 16', 'MUI'], 'ui'), 'nextjs');
+  assert.strictEqual(pickStackName('/x', ['Next.js 16'], 'data'), null);
+});
+
+test('extractInvariants: ranks task-relevant rule first, drops mentions + tooling notes', () => {
+  const d = tmp();
+  write(d, 'CLAUDE.md', [
+    '## Architecture',
+    '- application/ — use-case services, transaction boundaries, bid/timer/eligibility logic',
+    '## Must Not Do',
+    '- Do not weaken bid row locking, idempotency, rate limits, or timer validation.',
+    '- Do not expose real bidder identity in bidder-facing API responses or UI.',
+    '## Tooling',
+    '- superpowers:dispatching-parallel-agents skill is always present in Claude Code sessions.',
+    '## Files',
+    '- application/timer/WorkingHoursService.java',
+  ].join('\n'));
+  const inv = extractInvariants(d, 'improve bid locking and idempotency');
+  // a real rule mentioning the task tokens ranks first
+  assert(/weaken bid row locking/.test(inv[0]), `expected locking rule first: ${JSON.stringify(inv)}`);
+  // non-rule "mention" bullet (architecture list) is excluded
+  assert(!inv.some(x => /use-case services/.test(x)), `architecture mention leaked: ${inv}`);
+  // bare file path excluded
+  assert(!inv.some(x => /WorkingHoursService\.java/.test(x)), `file path leaked: ${inv}`);
+  // tooling note excluded
+  assert(!inv.some(x => /dispatching-parallel/.test(x)), `tooling note leaked: ${inv}`);
 });
 
 console.log('');
