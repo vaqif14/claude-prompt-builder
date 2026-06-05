@@ -18,3 +18,18 @@ Database,Migrations,php artisan migrate with rollback testing
 Database,Connection,.env-driven config never commit credentials
 Evidence,Commands,php artisan test php artisan migrate:fresh --seed
 Evidence,Runtime,Laravel Telescope for debug structured logging
+BestPractices,MVC,Route → Controller → Service → Model/Eloquent
+BestPractices,Requests,Form Request classes for validation
+BestPractices,Resources,API Resources for response transformation
+BestPractices,Testing,PHPUnit with Mockery feature tests
+BestPractices,Migrations,Version-controlled with rollback tests
+AntiPatterns,Fat Controllers,Business logic in controllers
+AntiPatterns,N+1 Queries,Missing eager loading
+AntiPatterns,Raw SQL,String-interpolated queries
+AntiPatterns,Mass Assignment,No guarded or fillable protection
+AntiPatterns,Logic in Blade,Complex logic in views instead of View Composers
+Verification,Type Check,phpstan or larastan
+Verification,Lint,pint or phpcs
+Verification,Tests,php artisan test
+Verification,Build,docker build or composer install
+Verification,Security,enlightn or security-checker

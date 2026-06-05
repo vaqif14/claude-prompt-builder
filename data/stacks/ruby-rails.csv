@@ -17,3 +17,18 @@ Database,Migrations,rails db:migrate db:rollback
 Database,Connection,Database.yml env-driven pool size
 Evidence,Commands,rspec rubocop rails test
 Evidence,Runtime,Rails logs structured logging with Lograge
+BestPractices,MVC,Fat models skinny controllers custom service objects
+BestPractices,Validations,Model validations with custom validators
+BestPractices,DRY,Concerns for shared model/controller logic
+BestPractices,Testing,RSpec with FactoryBot and Shoulda Matchers
+BestPractices,Migrations,Reversible migrations with rollback tests
+AntiPatterns,Fat Controllers,Business logic in controllers
+AntiPatterns,N+1 Queries,Missing includes or bullet gem warnings
+AntiPatterns,Raw SQL,String-interpolated queries
+AntiPatterns,Mass Assignment,No strong parameters protection
+AntiPatterns,Callback Hell,Excessive model callbacks creating hidden logic
+Verification,Type Check,rubocop
+Verification,Lint,rubocop -a
+Verification,Tests,rspec or rails test
+Verification,Build,docker build or bundle install
+Verification,Security,brakeman bundler-audit

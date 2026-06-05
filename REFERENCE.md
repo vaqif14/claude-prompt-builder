@@ -1,6 +1,23 @@
 # Claude Prompt Architect — Reference
 
+> Deep technical reference for Prompt Builder. Covers CCAP patterns, prompt templates, profiling checklists, agent orchestration mechanics, and extension points.  
+> For day-to-day usage see [SKILL.md](./SKILL.md). For quick lookups see [QUICKREF.md](./QUICKREF.md).
+
+---
+
 ## CCAP: Claude Code Architecture Patterns
+
+## Next Version Research
+
+The source-backed 1.6.0 plan lives in [ROADMAP.md](./ROADMAP.md). Use it when deciding what to implement next, especially for Anthropic-style workflow routing, verification-first prompts, context diet scoring, MCP/tool readiness, hackathon mode, and skill bloat review.
+
+The condensed pattern catalog is searchable through `data/patterns/agentic-next.csv`:
+
+```bash
+node scripts/search.js "ContextDiet"
+node scripts/search.js "HackathonDomainFirst"
+node scripts/search.js "ToolSearchFirst"
+```
 
 ### 1. System Contract (Altitude)
 
@@ -513,3 +530,10 @@ Agent B prompt:
   Context from Agent A: [summary of Agent A's key findings]
   Your task: [build on or validate Agent A's findings]
 ```
+
+---
+
+## Changelog
+
+Release history is tracked in [CHANGELOG.md](./CHANGELOG.md).  
+> Note: Create `CHANGELOG.md` at the repo root if it does not yet exist. Follow [Keep a Changelog](https://keepachangelog.com/) format with [Conventional Commits](https://www.conventionalcommits.org/) categories.

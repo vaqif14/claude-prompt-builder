@@ -10,3 +10,18 @@ Security,Auth,Supabase Auth with JWT policies
 Security,Access,RLS policies for every CRUD operation
 Evidence,Commands,supabase db diff supabase db push
 Evidence,Runtime,Supabase logs edge function metrics
+BestPractices,Schema,Postgres schema with Row Level Security
+BestPractices,RLS,Enable RLS on all tables with policies
+BestPractices,Types,Postgres native types and enums
+BestPractices,Migrations,Supabase CLI migrations version-controlled
+BestPractices,Auth,Supabase Auth with JWT RLS policies
+AntiPatterns,No RLS,Tables without Row Level Security
+AntiPatterns,Public Buckets,Storage buckets without access controls
+AntiPatterns,Client Secrets,Exposing service_role key in client
+AntiPatterns,No Migrations,Direct schema changes without CLI
+AntiPatterns,Unbounded Queries,select * without pagination
+Verification,Schema,supabase db diff
+Verification,RLS,RLS policies test with anon key
+Verification,Auth,Supabase Auth test flows
+Verification,Migrations,supabase migration list
+Verification,Security,RLS policy audit

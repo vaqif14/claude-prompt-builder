@@ -11,3 +11,18 @@ Security,Access,Separate app user from root
 Security,Backup,mysqldump with automated scheduling
 Evidence,Commands,mysqldump mysqlshow mysql
 Evidence,Runtime,Slow query log performance schema
+BestPractices,Engine,InnoDB with UTF-8 collation
+BestPractices,Indexes,Composite indexes for common WHERE patterns
+BestPractices,Constraints,Foreign keys with ON DELETE CASCADE where appropriate
+BestPractices,Migrations,Version-controlled incremental migrations
+BestPractices,Backup,mysqldump with automated scheduling
+AntiPatterns,MyISAM,Using MyISAM instead of InnoDB
+AntiPatterns,No Indexes,Missing indexes on JOIN and WHERE columns
+AntiPatterns,Select Star,SELECT * in production queries
+AntiPatterns,No Constraints,Missing foreign keys
+AntiPatterns,Root Access,Application using root user
+Verification,Schema,SHOW CREATE TABLE or mysqldump --no-data
+Verification,Indexes,EXPLAIN for query plans
+Verification,Queries,slow query log analysis
+Verification,Backup,mysqldump test restore
+Verification,Security,SHOW GRANTS FOR user

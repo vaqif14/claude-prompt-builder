@@ -9,7 +9,8 @@ const BUILT_IN_TOOLS = [
   { name: 'glob', description: 'Search for file paths', inputSchema: { pattern: 'string', path: 'string?' }, preHooks: [], postHooks: [] },
   { name: 'grep', description: 'Search for patterns in files', inputSchema: { pattern: 'string', path: 'string?' }, preHooks: [], postHooks: [] },
   { name: 'shell', description: 'Execute shell command', inputSchema: { command: 'string', timeout: 'number?' }, preHooks: ['command-allowlist'], postHooks: [] },
-  { name: 'Agent', description: 'Spawn a subagent', inputSchema: { description: 'string', prompt: 'string', subagent_type: 'string' }, preHooks: ['iteration-limit'], postHooks: ['state-update'] }
+  { name: 'Agent', description: 'Spawn a subagent', inputSchema: { description: 'string', prompt: 'string', subagent_type: 'string' }, preHooks: ['iteration-limit'], postHooks: ['state-update'] },
+  { name: 'generate', description: 'Generate a prompt via prompt-builder', inputSchema: { task: 'string' }, preHooks: ['iteration-limit'], postHooks: ['state-update'] }
 ];
 
 function loadSkillTools(dataDir = path.join(__dirname, '..', 'data')) {

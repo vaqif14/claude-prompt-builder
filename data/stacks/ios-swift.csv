@@ -2,7 +2,17 @@ category,key,value
 Stack,Platform,iOS / Apple platforms
 Stack,Language,Swift
 Stack,UI,SwiftUI or UIKit depending on project
+Architecture,Pattern,MVVM or reducer-style state depending on existing project
+Architecture,State,Keep view state observable and isolate side effects in services or view models
 Tools,Xcode,Xcode project workspace scheme simulator
 Testing,Required,XCTest and simulator verification when available
 Skills,Required,build-ios-apps:swiftui-ui-patterns build-ios-apps:ios-debugger-agent
+BestPractices,UI,Follow existing SwiftUI component patterns navigation and state ownership
+BestPractices,Concurrency,Use structured concurrency and avoid main-thread blocking work
+BestPractices,Accessibility,Verify Dynamic Type VoiceOver focus labels and tappable targets
 AntiPatterns,Do NOT assume web routes or browser-only QA
+AntiPatterns,Massive View,Do not put networking persistence and business rules directly in views
+AntiPatterns,Unsafe State,Do not mutate UI state from background threads
+Verification,Build,xcodebuild build or XcodeBuildMCP simulator build
+Verification,Tests,xcodebuild test or XCTest where available
+Verification,Runtime,Simulator screenshots logs navigation and interaction checks

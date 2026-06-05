@@ -17,3 +17,18 @@ Database,Migrations,dotnet ef migrations add/update
 Database,Connection,Connection string from appsettings or env
 Evidence,Commands,dotnet test dotnet build dotnet format
 Evidence,Runtime,Application Insights Serilog structured logs
+BestPractices,Layering,Controller → Service → Repository with DI
+BestPractices,DTOs,Request/response DTOs separate from entities
+BestPractices,Validation,FluentValidation or Data Annotations
+BestPractices,Auth,ASP.NET Core Identity or JWT with policy-based auth
+BestPractices,Testing,xUnit with Moq or NSubstitute
+AntiPatterns,Fat Controllers,Business logic in controllers
+AntiPatterns,Entity Exposure,Returning entities directly from API
+AntiPatterns,No Validation,Missing model validation on endpoints
+AntiPatterns,Sync DB,Blocking DB calls without async/await
+AntiPatterns,Secrets in Code,Connection strings in appsettings.Development only
+Verification,Type Check,dotnet build
+Verification,Lint,dotnet format --verify-no-changes
+Verification,Tests,dotnet test
+Verification,Build,dotnet publish
+Verification,Security,dotnet list package --vulnerable

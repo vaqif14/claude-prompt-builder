@@ -10,3 +10,18 @@ Security,Access,Datasource from application.yml env
 Security,Validation,Bean Validation on entities
 Evidence,Commands,Flyway migrate or Liquibase update
 Evidence,Runtime,Hibernate statistics slow query log
+BestPractices,Schema,Entity classes with clear annotations
+BestPractices,Relations,OneToMany ManyToOne with FetchType.LAZY
+BestPractices,Indexes,@Index @Table indexes
+BestPractices,Migrations,Flyway or Liquibase version-controlled
+BestPractices,Queries,JPQL or Criteria API preferential
+AntiPatterns,Eager Loading,Default FetchType.EAGER causing N+1
+AntiPatterns,No Indexes,Missing indexes on query fields
+AntiPatterns,Open Session,Open Session in View anti-pattern
+AntiPatterns,No Migrations,Schema changes without version control
+AntiPatterns,Raw SQL,Native queries without parameter binding
+Verification,Schema,Flyway info or Liquibase status
+Verification,Queries,hibernate statistics N+1 detection
+Verification,Migrations,Flyway validate or Liquibase diff
+Verification,Performance,connection pool metrics
+Verification,Security,role-based access to schema

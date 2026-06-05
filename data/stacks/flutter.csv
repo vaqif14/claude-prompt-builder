@@ -2,7 +2,17 @@ category,key,value
 Stack,Platform,Flutter cross-platform
 Stack,Language,Dart
 Stack,UI,Flutter widgets
+Architecture,Pattern,Feature-first widgets state and services depending on existing project
+Architecture,State,Use project state pattern such as Riverpod Bloc Provider or inherited state consistently
 Tools,Build,flutter analyze flutter test device or emulator
 Testing,Required,widget tests and runtime screenshots when available
 Skills,Required,find-skills ui-ux-pro-max verification-loop
+BestPractices,Widgets,Keep build methods small and extract reusable widgets
+BestPractices,Platform,Check iOS and Android behavior when native capabilities differ
+BestPractices,Accessibility,Verify semantics text scaling and tap targets
 AntiPatterns,Do NOT rewrite platform-specific native code unless required
+AntiPatterns,Blocking UI,Do not run heavy synchronous work inside build or main isolate
+AntiPatterns,State Drift,Do not mix unrelated state patterns without a boundary
+Verification,Analyze,flutter analyze
+Verification,Tests,flutter test with widget and unit tests
+Verification,Runtime,Device or emulator screenshots navigation and logs

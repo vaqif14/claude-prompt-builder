@@ -9,3 +9,18 @@ Security,Access,AUTH password or ACL for multi-user
 Security,Backup,RDB snapshots AOF persistence
 Evidence,Commands,redis-cli INFO redis-benchmark
 Evidence,Runtime,MONITOR slowlog memory usage
+BestPractices,Key Naming,Namespace with colon separator app:user:123
+BestPractices,TTL,Set expiration for all cache keys
+BestPractices,Eviction,LRU or LFU policy appropriate for use case
+BestPractices,Pipelining,Use pipelines for batch operations
+BestPractices,Lua,Atomic operations with Lua scripts
+AntiPatterns,No TTL,Keys without expiration growing forever
+AntiPatterns,Big Keys,Values larger than 100KB
+AntiPatterns,Key Scan,KEYS command in production use SCAN
+AntiPatterns,No Persistence,No RDB or AOF for critical data
+AntiPatterns,Public Access,Redis exposed to internet without AUTH
+Verification,Memory,INFO memory maxmemory policy
+Verification,Keys,SCAN or redis-cli --bigkeys
+Verification,Latency,redis-cli --latency-history
+Verification,Backup,RDB snapshot test restore
+Verification,Security,ACL LIST or CONFIG GET requirepass

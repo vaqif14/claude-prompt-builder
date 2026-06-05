@@ -10,3 +10,18 @@ Security,Access,Connection from TypeORM config env-driven
 Security,Validation,Class-validator decorators on DTOs
 Evidence,Commands,typeorm migration:run typeorm schema:sync
 Evidence,Runtime,Query logging with slow query detection
+BestPractices,Schema,Entity decorators as schema definition
+BestPractices,Relations,@OneToMany @ManyToOne with lazy loading care
+BestPractices,Indexes,@Index @Unique decorators
+BestPractices,Migrations,TypeORM migrations CLI version-controlled
+BestPractices,Connection,Env-driven TypeORM config
+AntiPatterns,Circular Relations,Bidirectional relations without care
+AntiPatterns,No Indexes,Missing @Index on query fields
+AntiPatterns,Select All,find without select option
+AntiPatterns,No Migrations,Schema changes without migrations
+AntiPatterns,Raw Queries,Excessive use of query without parameters
+Verification,Schema,typeorm schema:log
+Verification,Types,tsc --noEmit
+Verification,Migrations,typeorm migration:show
+Verification,Queries,query logging slow query detection
+Verification,Security,connection string from env

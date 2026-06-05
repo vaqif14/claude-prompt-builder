@@ -82,4 +82,7 @@ if (require.main === module) {
   }
 }
 
-module.exports = { loadState, saveState, updateState, getState, logAudit };
+const loadSession = loadState;
+const saveSession = saveState;
+
+module.exports = { loadState, saveState, updateState, getState, logAudit, loadSession, saveSession };

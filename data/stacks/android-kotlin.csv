@@ -2,7 +2,17 @@ category,key,value
 Stack,Platform,Android
 Stack,Language,Kotlin or Java depending on project
 Stack,UI,Jetpack Compose or XML views depending on project
+Architecture,Pattern,MVVM or unidirectional data flow depending on existing project
+Architecture,State,Use ViewModel and lifecycle-aware state collection
 Tools,Build,Gradle Android emulator logcat
 Testing,Required,unit tests instrumentation tests emulator QA when available
 Skills,Required,test-android-apps:android-emulator-qa test-android-apps:android-performance find-skills
+BestPractices,Compose,Keep composables small stable and previewable
+BestPractices,Lifecycle,Collect flows with lifecycle awareness and avoid leaking contexts
+BestPractices,Accessibility,Verify content descriptions touch targets and font scaling
 AntiPatterns,Do NOT assume iOS simulator or browser-only QA
+AntiPatterns,Activity God Object,Do not put networking persistence and business logic in Activity
+AntiPatterns,Blocking Main,Do not run blocking IO or heavy work on the main thread
+Verification,Build,./gradlew assembleDebug or project build task
+Verification,Tests,./gradlew test connectedAndroidTest when available
+Verification,Runtime,Emulator screenshots logcat navigation and interaction checks
