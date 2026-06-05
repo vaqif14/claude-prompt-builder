@@ -109,7 +109,7 @@ const MODES = {
       'Refactor plan with steps',
       'File:line changes per step',
       'Test results before/after',
-      'Metrics improvement',
+      'Metrics improvement (only if a perf fix was made; otherwise N/A)',
       'Changelog entry',
     ],
   },

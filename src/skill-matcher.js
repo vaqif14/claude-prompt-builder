@@ -6,6 +6,23 @@
 const { selectModel } = require('./model-router');
 const { sanitizeShellArg } = require('./sanitize');
 
+// Pick the skill an agent should own by TASK FIT, not by array position. A quality
+// refactor of a Spring backend should bind springboot-patterns / java-code-review, not
+// the positional-first api-design. Generic across every platform's defaultSkills list.
+function pickPrimarySkill(defaultSkills, mode) {
+  const skills = (defaultSkills || []).filter(Boolean);
+  if (!skills.length) return 'find-skills';
+  if (mode === 'security-review') {
+    const sec = skills.find(s => /security/.test(s));
+    if (sec) return sec;
+  }
+  if (['refactor', 'architecture-review', 'audit', 'performance-review'].includes(mode)) {
+    const fit = skills.find(s => /patterns|review|standards|quality|concurrency/.test(s));
+    if (fit) return fit;
+  }
+  return skills[0];
+}
+
 function analyzeTask(task) {
   const lower = task.toLowerCase();
   const domains = [];
@@ -139,11 +156,21 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
   );
 
   for (const platform of platforms) {
-    for (const skill of platform.defaultSkills) {
+    // Lead with the task-fit skill (e.g. springboot-patterns for a refactor), not the
+    // positional first entry (api-design). Mark the rest demand-driven, not blanket
+    // mandatory, so the prompt does not force security/DB passes on a task that touches
+    // neither (respects minimal-scope).
+    const primary = pickPrimarySkill(platform.defaultSkills, template);
+    add(
+      primary,
+      `${platform.label} primary skill for this task`,
+      `Load this first for ${platform.label}. Expected evidence: ${platform.evidence}.`
+    );
+    for (const skill of (platform.defaultSkills || []).filter(s => s !== primary)) {
       add(
         skill,
-        `${platform.label} specialist workflow`,
-        `Use this for ${platform.label}. Expected evidence: ${platform.evidence}. If unavailable, search for a better ${platform.label} skill before continuing.`
+        `${platform.label} skill — conditional`,
+        `Invoke only if the grounding step finds work it covers (persistence, security, contracts, migrations, etc.); otherwise mark it N/A with a one-line reason. Do not do work the task does not need.`
       );
     }
   }
@@ -288,7 +315,8 @@ function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', st
   ];
 }
 
-function getAgentCouncil(task, mode, complexity, options) {
+function getAgentCouncil(task, mode, complexity, options, surface = {}) {
+  const { isUi = true, isService = false } = surface;
   const lower = task.toLowerCase();
   const agents = [];
   const add = (name, mission, output) => agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
@@ -306,11 +334,19 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  add(
-    'Frontend Code Reviewer',
-    'Trace actual files, hooks, API calls, i18n keys, and state boundaries.',
-    'File:line findings, broken assumptions, missing states, risky code paths, and scoped fix plan.'
-  );
+  if (isService && !isUi) {
+    add(
+      'Backend/Service Code Reviewer',
+      'Trace actual files, services, repositories, transaction boundaries, error/exception handling, and public contracts.',
+      'File:line findings, broken assumptions, invariant/concurrency/transaction risks, risky code paths, and scoped fix plan.'
+    );
+  } else {
+    add(
+      'Frontend Code Reviewer',
+      'Trace actual files, hooks, API calls, i18n keys, and state boundaries.',
+      'File:line findings, broken assumptions, missing states, risky code paths, and scoped fix plan.'
+    );
+  }
 
   if (mode === 'audit' || /\b(?:review|audit|verify|confirm|working|qa)\b/.test(lower)) {
     add(
@@ -411,7 +447,7 @@ function getUniversalAgentRoster(task, mode, platforms = [], complexity, options
   );
 
   for (const platform of platforms) {
-    currentSkill = (platform.defaultSkills && platform.defaultSkills[0]) || 'find-skills';
+    currentSkill = pickPrimarySkill(platform.defaultSkills, mode);
     if (platform.id === 'web') {
       add('Frontend/Web Agent', 'routes, components, UI state, browser behavior', 'web/frontend tasks', 'file findings, UI fixes, browser evidence');
       add('Product/UI Designer Agent', 'visual hierarchy, layout, typography, responsive polish', 'visual/product tasks', 'designer rubric findings and top design fixes', 'ui-ux-pro-max');
@@ -523,7 +559,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
   ];
 
   platforms.forEach((platform, index) => {
-    const platformSkill = (platform.defaultSkills && platform.defaultSkills[0]) || 'find-skills';
+    const platformSkill = pickPrimarySkill(platform.defaultSkills, mode);
     if (platform.isIntegrationLane) {
       cards.push({
         id: `I1`,
@@ -555,7 +591,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
       title: 'Run verification gates and collect runtime evidence',
       status: 'todo',
       dependsOn: platforms.length ? platforms.filter(p => !p.isIntegrationLane).map((_, index) => `P${index + 1}`).join(', ') : 'T1',
-      artifact: 'commands, screenshots/logs, console/network or platform runtime evidence',
+      artifact: 'commands run + results, test output, logs/traces; plus screenshots + console/network for UI surfaces',
     },
     {
       id: 'S1',

@@ -27,9 +27,15 @@ function validatePrompt(promptText) {
   checks.push({ pass: hasPlatform, label: 'Platform correctly detected with evidence', points: 12 });
 
   // 3. Agent Roster / Task Board (12 pts)
-  const hasAgentBoard = /Multica-Style Task Board|Agent Assignment|task card|owner/i.test(p) &&
+  const hasAgentBoard = /Multi-Agent Task Board|Multica-Style Task Board|Agent Assignment|task card|owner/i.test(p) &&
     /id \||owner \||title \||depends_on/i.test(p);
   checks.push({ pass: hasAgentBoard, label: 'Agent roster or task board present', points: 12 });
+
+  // 3b. Skill invocation list + agent→skill binding actually survived budgeting (8 pts)
+  const hasRequiredSkills = /Required Skills To Invoke/i.test(p) && /Skill Execution Order/i.test(p);
+  const hasSkillBinding = /skill=/.test(p) && /Skill Binding Rule/i.test(p);
+  checks.push({ pass: hasRequiredSkills, label: 'Required-skills-to-invoke list present (not elided)', points: 4 });
+  checks.push({ pass: hasSkillBinding, label: 'Each agent bound to a skill', points: 4 });
 
   // 4. Evidence Gates (12 pts)
   const hasEvidence = /Evidence Gates|evidence required|screenshot|console|network|log/i.test(p);

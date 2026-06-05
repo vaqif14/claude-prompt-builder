@@ -73,7 +73,7 @@ prompt-builder --session-id sess_xxx "continue implementation"
 - **10 Prompt Modes** — feature, audit, bugfix, refactor, design-review, architecture-review, security-review, performance-review, release-check, prd-to-tasks
 - **Mixed-Platform Lanes** — Auto-creates integration lane when multiple platforms detected
 - **Skill Discovery Preflight** — Scans local skills + ecosystem search + install recommendations
-- **Multica Task Board** — Task cards with id | owner | title | status | depends_on | artifact
+- **Multi-Agent Task Board** — Task cards with id | owner | skill | title | status | depends_on | artifact
 - **Validation V2** — Quality scoring (100 pts) replacing trivial presence checks
 - **30+ Stack Profiles** — Stack-specific best practices, anti-patterns, and verification gates
 - **Model Selection** — Auto-routes to Haiku/Sonnet/Opus by complexity (`--model` override)

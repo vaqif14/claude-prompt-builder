@@ -11,7 +11,7 @@ MigrationPlan,Clean: remove old pattern,
 Constraints,Zero breaking changes to public APIs,
 Constraints,Each commit must be independently revertible,
 Constraints,No changes to business logic behavior-preserving,
-AcceptanceCriteria,All existing tests pass without modification,
+AcceptanceCriteria,Existing tests pass without changing their behavioral assertions,
 AcceptanceCriteria,New pattern matches target specification,
-AcceptanceCriteria,No regression in performance,
-AcceptanceCriteria,Deprecation notes added for removed APIs
+AcceptanceCriteria,No performance regression; report before/after only where a perf change was made,
+AcceptanceCriteria,If any API was intentionally removed (should be none in a contract-preserving refactor) deprecation is noted

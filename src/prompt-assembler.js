@@ -55,6 +55,36 @@ function inferTaskUnderstanding(task, mode, platforms = []) {
   ];
 }
 
+// Platform-aware grounding slots: a backend/service or data task must not be handed
+// UI slots (route/page, design tokens, i18n, render states) and vice-versa.
+function buildGroundingSlots(surface = {}) {
+  const { isUi, isService, isData, isCli } = surface;
+  const slots = [];
+  slots.push('Target entry point — the file that owns this work; if it is a redirect, barrel, re-export, or thin wrapper, resolve to the true implementation');
+  if (isUi) {
+    slots.push('Component / view tree the surface renders');
+    slots.push('Data layer feeding the UI: hooks, queries, stores, or API client');
+    slots.push('Design tokens / style source to judge visuals against');
+    slots.push('i18n / locale catalogs, if the project is localized');
+    slots.push('UI state branches: loading, empty, error, and success');
+  }
+  if (isService) {
+    slots.push('Public API / DTO / contract the surface exposes (do not change its shape during a refactor)');
+    slots.push('Call graph: controller/handler → service → repository/persistence');
+    slots.push('Transaction boundaries and the error/exception-handling strategy');
+    slots.push('Domain invariants to preserve before refactoring: concurrency/locking, idempotency, money/amount math, scheduling/time, auth/authorization, append-only/audit data');
+  }
+  if (isData) {
+    slots.push('Schema, indexes, and the migration set (treat already-applied migrations as immutable — add forward migrations only)');
+    slots.push('Hot queries and their query plans');
+  }
+  if (isCli) {
+    slots.push('Commands, flags, exit codes, and fixtures');
+  }
+  slots.push('Verification commands — detect the package manager / build tool from the lockfile / build file (pnpm-lock.yaml→pnpm, yarn.lock→yarn, package-lock.json→npm; build.gradle→Gradle, pom.xml→Maven, Cargo.toml→cargo, go.mod→go)');
+  return slots.map(s => `  • ${s}`);
+}
+
 function generatePrompt(task, options = {}) {
   const { inferMode } = require('./mode-router');
   const { detectPlatformsMixed, detectStack } = require('./platform-detector');
@@ -76,6 +106,20 @@ function generatePrompt(task, options = {}) {
   const platforms = detectPlatformsMixed(detectionTask);
   const analysis = analyzeTask(detectionTask);
   const modeConfig = getModeConfig(mode);
+
+  // Surface kind drives platform-aware grounding, evidence, and review passes.
+  // A backend/service refactor must not get frontend-templated grounding slots,
+  // a "render with real data" evidence gate, or a Frontend Code Reviewer.
+  const platformIds = platforms.map(p => p.id);
+  const UI_IDS = ['web', 'ios', 'android', 'flutter', 'react-native', 'desktop'];
+  const SERVICE_IDS = ['backend', 'node-express', 'nestjs', 'python', 'python-fastapi', 'python-django', 'ruby-rails', 'go', 'rust', 'dotnet', 'laravel', 'ai'];
+  const DATA_IDS = ['db', 'data-ml'];
+  const surface = {
+    isUi: platformIds.some(id => UI_IDS.includes(id)),
+    isService: platformIds.some(id => SERVICE_IDS.includes(id)),
+    isData: platformIds.some(id => DATA_IDS.includes(id)),
+    isCli: platformIds.includes('cli'),
+  };
 
   const dataDir = path.join(__dirname, '..', 'data');
 
@@ -141,7 +185,7 @@ function generatePrompt(task, options = {}) {
       })
     : null;
   const skillDiscoveryProtocol = getSkillDiscoveryProtocol(task, analysis.domains, platforms, stack, stackProfile);
-  const agentCouncil = getAgentCouncil(task, mode, analysis.complexity, options);
+  const agentCouncil = getAgentCouncil(task, mode, analysis.complexity, options, surface);
   const designerRubric = getDesignerRubric(task);
   const universalAgentRoster = getUniversalAgentRoster(task, mode, platforms, analysis.complexity, options);
   const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms);
@@ -177,18 +221,29 @@ function generatePrompt(task, options = {}) {
       '',
       'This prompt is generated from heuristics and is NOT yet grounded in the target repo.',
       'Before doing the work, read the actual codebase and resolve these to real file:line targets:',
-      '  • Target route / page / entry file — if it is a redirect, barrel, or re-export, resolve to the true rendering surface',
-      '  • The component / module tree the surface actually renders',
-      '  • Data layer feeding it: hooks, queries, services, or API client',
-      '  • Design tokens / style source (or API/domain contract) to judge against',
-      '  • i18n / locale catalogs, if the project is localized',
-      '  • State branches: loading, empty, and error',
-      '  • Verification commands: detect the package manager / build tool from the lockfile (pnpm-lock.yaml→pnpm, yarn.lock→yarn, package-lock.json→npm; Gradle/Maven/Cargo/etc. for non-JS)',
+      ...buildGroundingSlots(surface),
       '',
       'Do not begin work, and do not present a verdict, until these are resolved to concrete paths.',
       '',
     ],
   })
+
+  if (!isReadOnly) {
+    promptSections.push({
+      name: 'WRITE SAFETY GATE',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        '  WRITE SAFETY GATE — TAKES PRECEDENCE OVER THE EXECUTION PLAN',
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        'These gates override the Execution Plan below. Do not start editing until they are satisfied.',
+        '  • Plan-Approval Gate: if the change spans multiple files or touches shared/critical code, present the change/deviation list and WAIT for explicit user approval before editing. Do not plan and fix in the same pass unless the user already approved fixes.',
+        '  • Invariant Fence: before changing code, discover and characterize (with tests) the load-bearing invariants of the touched paths — concurrency/locking, idempotency, money/amount math, scheduling/time, auth/authorization, append-only/audit data, and already-applied DB migrations. Do NOT weaken any of them; escalate before changing locking, transaction semantics, or an applied migration.',
+        '  • Behavior-preserving means same observable outputs/contracts. Performance fixes (e.g. resolving N+1) that keep outputs identical are allowed and expected — capture a before/after measurement; never fabricate metrics.',
+        '',
+      ],
+    })
+  }
 
   promptSections.push({
     name: 'CONTEXT WINDOW',
@@ -255,17 +310,17 @@ function generatePrompt(task, options = {}) {
       'Skill Execution Order:',
       ...skillPlan.map((item, index) => `  ${index + 1}. Invoke ${item.skill}: ${item.instruction}`),
       '',
-      'Rule: Do not continue with the audit/build until the relevant skills above have been invoked or explicitly marked unavailable with a reason.',
+      'Rule: Do not continue with the audit/build until each relevant skill above has been invoked, marked unavailable with a reason, or marked N/A (not applicable to this task\'s scope) — invoke only what the task actually needs.',
       'Rule: Do not claim a skill was used unless its guidance was actually loaded/read or its workflow was followed.',
       '',
     ],
   })
 
   promptSections.push({
-    name: 'MULTICA-STYLE TASK BOARD',
+    name: 'MULTI-AGENT TASK BOARD',
     lines: [
       '═══════════════════════════════════════════════════════════════',
-      '  MULTICA-STYLE TASK BOARD',
+      '  MULTI-AGENT TASK BOARD',
       '═══════════════════════════════════════════════════════════════',
       '',
       'Use this as a managed-agent task board: split the work into owned task cards, run independent cards in parallel when possible, track status, collect artifacts, then synthesize.',
@@ -364,6 +419,7 @@ function generatePrompt(task, options = {}) {
         'Never install global packages without confirmation',
         'Stop and Ask before: destructive ops, architectural changes, security modifications',
       ]).map(c => `  • ${c}`),
+      ...(!isReadOnly ? ['  • Write-safety gates apply (see WRITE SAFETY GATE near the top): plan approval before editing, and the invariant fence.'] : []),
       '',
     ],
   })
@@ -405,7 +461,7 @@ function generatePrompt(task, options = {}) {
       '  • Escalate to human if destructive operation required',
       '  • Escalate if skill discovery finds a stronger skill but install is blocked',
       '  • Stop if verification gates fail and user has not approved fixes',
-      '  • Stop if platform evidence cannot be collected due to missing dev server / emulator / credentials',
+      '  • Stop if evidence cannot be collected due to missing prerequisites (dev server, emulator, backend, database, or credentials)',
       '',
     ],
   })
@@ -421,10 +477,10 @@ function generatePrompt(task, options = {}) {
       ...(sections.AcceptanceCriteria || modeConfig.acceptanceCriteria).map(a => `  - [ ] ${a}`),
       '',
       'Evidence Gates:',
-      '  • Every claim must be backed by file:line, screenshot, command output, or log',
-      '  • "Working" requires the resolved target surface to actually render with real data (screenshot/output) — not merely passing commands; partial pass = "Working with issues"',
+      `  • Every claim must be backed by file:line, ${surface.isUi ? 'screenshot, ' : ''}command output, or log`,
+      `  • "Working" requires ${surface.isUi ? 'the resolved target surface to actually render with real data (screenshot + clean console/network)' : 'the changed code path proven by passing tests plus logs / traces / query output (not merely that the project compiles)'} — not merely commands exiting 0; partial pass = "Working with issues"`,
       '  • A build/test failure outside the target surface is a separate finding, not this surface\'s verdict',
-      '  • Blocked = missing prerequisites (auth, dev server, backend, data) documented precisely',
+      '  • Blocked = missing prerequisites (auth, running services, database, data, or credentials) documented precisely',
       '',
     ],
   })
@@ -470,7 +526,7 @@ function generatePrompt(task, options = {}) {
     s.priority = critical.has(s.name) ? 0 : (SECTION_PRIORITIES[s.name] ?? 1)
   }
 
-  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 3500 : options.maxTokens)
+  const maxTokens = options.full ? null : (options.maxTokens === undefined ? 4500 : options.maxTokens)
   let finalSections = promptSections
   let budget = null
 

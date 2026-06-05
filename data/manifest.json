@@ -31,7 +31,7 @@
   "stacks/redis.csv": "a2f8411beb043a07d626025207daa4ca6e44edf6abd8fa8ef5a3dd122b45dd72",
   "stacks/ruby-rails.csv": "cff9e190dbbad2298adb5dc5edde6838dbf53022fe61624f4bec495ebbd0fcc2",
   "stacks/rust.csv": "ddae9b4c759b401676ba2fe5c16a2bcb6d682818507a6403332dadf512f50ac7",
-  "stacks/spring-boot.csv": "2d667e58e9ce54cb00c5254964063cf80b7df870aa12e08c7968bb75be6862a6",
+  "stacks/spring-boot.csv": "5e9c51f8f52657e08fff5ecee4fb7a38f3df75b6929b850c4be3f0a62e83121e",
   "stacks/supabase.csv": "ec8ca4e7e3193850e36bd4328a2516c89369e9ba1d18c3b0c38a9044df4ce5ad",
   "stacks/typeorm.csv": "d076585cbf9eee82fc73bbc77c8aefba9b6d6d44d2b40ed74f6fcb077fe95c6c",
   "templates/api-design.csv": "c26cc51e1e5e3a4fc7de89e6253b3a12c9006f809be1855b2f90bf39509439d2",
@@ -46,7 +46,7 @@
   "templates/migration-plan.csv": "55b2281b89b0a0c1f5f0cd0424d927ffea2c4e7401482564565839190da499a4",
   "templates/performance-review.csv": "1ed48f320a255624bc665a3548254fde74463a378c62709f4820d52570a9c353",
   "templates/prd-to-tasks.csv": "586dce655d695b00f021cfa481cbfdd216eabdcb89190696c3ce11222a20e4cb",
-  "templates/refactor.csv": "5f6c4960414819738f8c42eb0ec450df65d99b12231520b6129e05ccbfd2c515",
+  "templates/refactor.csv": "14ee1c4dd0ed0dfd53fb7255b424ada19c448f9f436492aec8853aacb01978be",
   "templates/release-check.csv": "23ea5a58b14297958fa337ccf7e87677dad2dbdd92f9e6a79b0532fc31909243",
   "templates/security-review.csv": "be414632734396cbee41c8b210abcb824969c2de1217ea1d5045cc3fdb3b5e3a"
 }

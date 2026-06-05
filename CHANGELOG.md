@@ -4,6 +4,44 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-05
+
+Platform-awareness release. An adversarial agent review of a backend code-quality prompt
+scored the prior output 38/100 — frontend-biased throughout, skills bound by array position,
+write-safety missing. This release rebuilds those paths to be surface-aware and re-scored 91/100.
+
+### Added
+
+- **Surface-aware GROUNDING CONTRACT**: backend/service tasks get service slots (public API/DTO
+  contract, controller→service→repository call graph, transaction boundaries, domain invariants);
+  data tasks get schema/migrations/query-plan slots; UI tasks keep route/component/design-token/i18n
+  slots. No more design-tokens/i18n grounding handed to a Java backend.
+- **Task-fit skill binding** (`pickPrimarySkill`): refactor/architecture/audit/perf tasks bind the
+  patterns/review skill (e.g. springboot-patterns), not the positional-first api-design; the skill
+  execution order leads with it. Secondary skills are now **demand-driven** ("invoke only if the
+  grounding step finds work it covers; else N/A") instead of blanket-mandatory.
+- **Platform-aware Agent Review Council**: service surfaces get a Backend/Service Code Reviewer
+  (services/repos/transactions/error handling), not a Frontend reviewer hunting i18n keys.
+- **WRITE SAFETY GATE** (write modes), hoisted above the Execution Plan: a Plan-Approval Gate
+  (present the change list and wait for approval before editing) and an Invariant Fence
+  (characterize concurrency/locking, idempotency, money/time, auth, append-only/audit data, and
+  applied migrations before changing; never weaken them) — with explicit "never fabricate metrics".
+
+### Fixed
+
+- Evidence verdict is surface-aware: UI = renders with real data (screenshot); service/data = proven
+  by passing tests + logs/traces/query output. "screenshot" and "dev server" no longer demanded of
+  backend tasks.
+- The skill-invocation list and agent review council are now protected from token-budget elision
+  (MATCHED SKILLS → priority 0, council → priority 1); default budget 3500→4500 so the full
+  comprehensive prompt survives. Validator now checks the skill-invocation list + agent→skill
+  binding actually survived (no more 100/100 with skills silently elided).
+- Removed refactor-template legacy checkboxes that invited fabricated metrics / phantom API
+  deprecations / test-gaming; reconciled "no perf regression" with sanctioned N+1 fixes.
+- spring-boot stack profile no longer asserts JWT/OAuth2 auth or Testcontainers as fact (hedged
+  per project — corp-auction is LDAP/sessions); Flyway noted forward-only.
+- Renamed the user-facing "MULTICA-STYLE TASK BOARD" → "MULTI-AGENT TASK BOARD".
+
 ## [1.5.6] - 2026-06-05
 
 Real-world test (backend code-quality task) surfaced routing/scoring gaps; closed them.

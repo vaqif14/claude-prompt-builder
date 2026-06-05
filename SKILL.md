@@ -102,7 +102,7 @@ Generate these sections in order:
 4. **Matched Skills**: only skills that directly improve the task
 5. **Required Skills To Invoke**: exact skill names, reasons, and execution order
 6. **Agent Review Council**: role-based passes such as designer, UI architect, frontend reviewer, browser QA, verification
-7. **Multica-Style Task Board**: task cards with id | owner | title | status | depends_on | artifact
+7. **Multi-Agent Task Board**: task cards with id | owner | skill | title | status | depends_on | artifact
 8. **Execution Plan**: checkbox tasks, first task active
 9. **Tool Directives**: read/write/execute/browser permissions and forbidden actions
 10. **Constraints**: scope fences and stop-and-ask triggers
@@ -209,7 +209,7 @@ Candidate skills (confirm availability via `find-skills`; names may differ acros
 - `browser-qa` for runtime UI verification
 - `verification-loop` for build/type/lint/test gates
 
-## Multica-Style Orchestration
+## Multi-Agent Orchestration
 
 Use a managed-agent task-board style:
 
