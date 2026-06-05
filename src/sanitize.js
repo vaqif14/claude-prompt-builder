@@ -47,8 +47,43 @@ function sanitizeCsvValue(value, sourceFile) {
   return value.replace(/\n/g, '\\n').replace(/\r/g, '\\r')
 }
 
+/**
+ * Neutralize untrusted free-text (the CLI `task`) before it is embedded in a
+ * generated prompt or written to a cache file. Escape, do not reject: a task
+ * legitimately contains words like "ignore", "eval(", "fetch(", "security review".
+ * The real risk is structural — the task forging a new "═══ SECTION ═══" header
+ * or an "Authority:" / "Tool Permissions:" line that the downstream agent trusts.
+ */
+function neutralizeUserText(value, maxLen = 500) {
+  if (!value || typeof value !== 'string') return value
+
+  let out = value
+    // Strip ANSI escape sequences (terminal-escape spoofing).
+    .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+    // Strip other C0/C1 control chars and box-drawing delimiters used as section
+    // separators, so the task cannot forge prompt structure.
+    .replace(/[\x00-\x1f\x7f─-╿]/g, ' ')
+    // Collapse any whitespace (incl. newlines) to single spaces — the task is a
+    // one-line intent, not a multi-section document.
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (out.length > maxLen) out = `${out.slice(0, maxLen)}…`
+  return out
+}
+
+/**
+ * Render-safe form for embedding inside a double-quoted shell suggestion such as
+ * `npx skills find "<query>"`. The CLI never executes it, but an agent might.
+ */
+function sanitizeShellArg(value) {
+  return neutralizeUserText(value).replace(/["`$;\\]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 module.exports = {
   PROMPT_INJECTION_MARKERS,
   DANGEROUS_BASH_PATTERNS,
   sanitizeCsvValue,
+  neutralizeUserText,
+  sanitizeShellArg,
 }

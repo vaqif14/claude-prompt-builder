@@ -3,21 +3,25 @@
  * Token budgeting and context window management for prompt assembly.
  */
 
+// Single source of truth for section priority during token budgeting.
+// 0 = always keep, 1 = keep if space, 2 = compress under pressure, 3 = elide first.
+// prompt-assembler derives every section's `priority` from this map — do not
+// duplicate these numbers inline in the assembler.
 const SECTION_PRIORITIES = {
   'SYSTEM CONTRACT': 0,
-  'CONTEXT WINDOW': 2,
+  'CONTEXT WINDOW': 1,
   'SKILL DISCOVERY PREFLIGHT': 1,
-  'MATCHED SKILLS': 1,
+  'MATCHED SKILLS': 2,
   'MULTICA-STYLE TASK BOARD': 0,
-  'AGENT REVIEW COUNCIL': 0,
+  'AGENT REVIEW COUNCIL': 2,
   'DESIGNER RUBRIC': 3,
-  'MODEL ASSIGNMENTS': 0,
+  'MODEL ASSIGNMENTS': 3,
   'EXECUTION PLAN': 0,
   'TOOL DIRECTIVES': 0,
   'CONSTRAINTS': 0,
-  'STACK BEST PRACTICES TO APPLY': 2,
-  'STACK ANTI-PATTERNS TO AVOID': 3,
-  'STACK VERIFICATION GATES': 3,
+  'STACK BEST PRACTICES TO APPLY': 1,
+  'STACK ANTI-PATTERNS TO AVOID': 1,
+  'STACK VERIFICATION GATES': 1,
   'ACCEPTANCE CRITERIA': 0,
   'OUTPUT SCHEMA': 0,
 }

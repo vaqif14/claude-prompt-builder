@@ -9,7 +9,7 @@ const { validatePrompt } = require('../scripts/validate');
 const { getModeConfig } = require('./mode-router');
 const { ensureStackProfile } = require('./stack-cache');
 const { selectModel } = require('./model-router');
-const { sanitizeCsvValue } = require('./sanitize');
+const { sanitizeCsvValue, neutralizeUserText } = require('./sanitize');
 
 function parseRows(file) {
   if (!fs.existsSync(file)) return [];
@@ -36,14 +36,14 @@ function inferTaskUnderstanding(task, mode, platforms = []) {
   const config = getModeConfig(mode);
   const lower = task.toLowerCase();
   const action = config.label.toLowerCase();
-  const surface = /admin|dashboard/.test(lower)
+  const surface = /\b(?:admin|dashboard)\b/.test(lower)
     ? 'admin dashboard'
-    : /bidder|auction|auctions|lot|product/.test(lower)
-      ? 'bidder auction/product surface'
-      : /login|auth/.test(lower)
-        ? 'authentication surface'
+    : /\b(?:login|auth|signin|signup)\b/.test(lower)
+      ? 'authentication surface'
+      : /\b(?:design|ui|ux|page|screen|component|card)\b/.test(lower)
+        ? 'UI surface'
         : 'requested code surface';
-  const expected = /design|ui|ux|dashboard|page|screen|visual/.test(lower)
+  const expected = /\b(?:design|ui|ux|dashboard|page|screen|visual)\b/.test(lower)
     ? 'professional UI/UX judgment, visual hierarchy, interaction quality, and runtime evidence'
     : 'source-grounded engineering judgment and runtime evidence';
 
@@ -56,7 +56,7 @@ function inferTaskUnderstanding(task, mode, platforms = []) {
 }
 
 function generatePrompt(task, options = {}) {
-  const { inferMode, inferTemplate } = require('./mode-router');
+  const { inferMode } = require('./mode-router');
   const { detectPlatformsMixed, detectStack } = require('./platform-detector');
   const {
     analyzeTask,
@@ -108,16 +108,16 @@ function generatePrompt(task, options = {}) {
     else stackContext.push(item);
   }
 
-  // Admin dashboard route hints (project-aware)
+  // Admin/dashboard surface hints — generic guidance, not project-specific paths.
+  // The next agent should detect the real paths from the repo it is working in.
   const lower = task.toLowerCase();
-  const routeHints = /admin|dashboard/.test(lower)
+  const routeHints = /\b(?:admin|dashboard)\b/.test(lower)
     ? [
-        'Admin dashboard route: frontend/src/app/[locale]/(admin)/admin/page.tsx',
-        'Dashboard components: frontend/src/features/admin/components/dashboard/',
-        'Dashboard hooks: frontend/src/features/admin/hooks/useAdminDashboard.ts and useAdminAnalytics.ts',
-        'Admin API client: frontend/src/features/admin/services/admin-client.ts',
-        'Translations: frontend/messages/az.json, frontend/messages/en.json, frontend/messages/ru.json',
-        'Style contract: docs/reference/frontend-ui-style-contract.md',
+        'Locate the admin/dashboard route in this repo (e.g. an (admin) route group or a dashboard page component).',
+        'Find the dashboard data layer: list/query hooks and the API client that feeds the widgets.',
+        'Find the shared UI primitives (tables, cards, charts) the dashboard composes.',
+        'Find the i18n/translation catalogs if the app is localized.',
+        'Find any project UI/style contract or design-system doc and judge against it.',
       ]
     : [];
 
@@ -153,14 +153,13 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'SYSTEM CONTRACT',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  SYSTEM CONTRACT',
       '═══════════════════════════════════════════════════════════════',
       '',
       `Role: ${(sections.Role?.[0] || modeConfig.label).replace(/\[stack\]/g, stack)}`,
-      `Mission: ${task}`,
+      `Mission: ${neutralizeUserText(task)}`,
       `Authority: ${modeConfig.authority}`,
       '',
       'Task Understanding:',
@@ -171,7 +170,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'CONTEXT WINDOW',
-    priority: 1,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  CONTEXT WINDOW',
@@ -204,7 +202,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'SKILL DISCOVERY PREFLIGHT',
-    priority: 1,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  SKILL DISCOVERY PREFLIGHT',
@@ -223,7 +220,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'MATCHED SKILLS',
-    priority: 2,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  MATCHED SKILLS',
@@ -245,7 +241,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'MULTICA-STYLE TASK BOARD',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  MULTICA-STYLE TASK BOARD',
@@ -267,7 +262,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'AGENT REVIEW COUNCIL',
-    priority: 2,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  AGENT REVIEW COUNCIL',
@@ -282,7 +276,6 @@ function generatePrompt(task, options = {}) {
   if (designerRubric.length) {
     promptSections.push({
       name: 'DESIGNER RUBRIC',
-      priority: 3,
       lines: [
         'Designer-Eye Rubric:',
         ...designerRubric.map(item => `  • ${item}`),
@@ -295,7 +288,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'MODEL ASSIGNMENTS',
-    priority: 3,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  MODEL ASSIGNMENTS',
@@ -311,7 +303,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'EXECUTION PLAN',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  EXECUTION PLAN',
@@ -325,7 +316,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'TOOL DIRECTIVES',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  TOOL DIRECTIVES',
@@ -339,7 +329,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'CONSTRAINTS',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  CONSTRAINTS',
@@ -358,7 +347,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'STACK BEST PRACTICES TO APPLY',
-    priority: 1,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  STACK BEST PRACTICES TO APPLY',
@@ -371,7 +359,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'STACK ANTI-PATTERNS TO AVOID',
-    priority: 1,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  STACK ANTI-PATTERNS TO AVOID',
@@ -384,7 +371,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'STACK VERIFICATION GATES',
-    priority: 1,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  STACK VERIFICATION GATES',
@@ -403,7 +389,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'ACCEPTANCE CRITERIA',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  ACCEPTANCE CRITERIA',
@@ -422,7 +407,6 @@ function generatePrompt(task, options = {}) {
 
   promptSections.push({
     name: 'OUTPUT SCHEMA',
-    priority: 0,
     lines: [
       '═══════════════════════════════════════════════════════════════',
       '  OUTPUT SCHEMA',
@@ -442,7 +426,12 @@ function generatePrompt(task, options = {}) {
     compressSection,
     buildContextReport,
     setContextReport,
+    SECTION_PRIORITIES,
   } = require('./context-manager')
+
+  // Single source of truth: derive every section's budgeting priority from the
+  // SECTION_PRIORITIES map instead of hardcoding it on each section literal.
+  for (const s of promptSections) s.priority = SECTION_PRIORITIES[s.name] ?? 1
 
   const maxTokens = options.full ? null : (options.maxTokens === undefined ? 3000 : options.maxTokens)
   let finalSections = promptSections
@@ -512,20 +501,41 @@ function generatePrompt(task, options = {}) {
   };
 }
 
-function verifyDataIntegrity(dataDir) {
+// Memoize per data dir so a multi-call CLI session / test run hashes the data
+// files at most once, not on every generatePrompt invocation.
+const _verifiedDirs = new Set();
+
+/**
+ * Tamper-detection for the bundled CSV data.
+ * Strict (throws) only in CI / when PROMPT_BUILDER_VERIFY=1. In normal dev runs a
+ * contributor editing a CSV without regenerating the manifest gets a one-time
+ * warning instead of a hard failure (run `npm run manifest` to refresh).
+ */
+function verifyDataIntegrity(dataDir, options = {}) {
+  if (_verifiedDirs.has(dataDir)) return true;
+  const strict = options.strict ?? process.env.PROMPT_BUILDER_VERIFY === '1';
+
   const manifestPath = path.join(dataDir, 'manifest.json');
-  if (!fs.existsSync(manifestPath)) return true;
+  if (!fs.existsSync(manifestPath)) { _verifiedDirs.add(dataDir); return true; }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+
   for (const [relativePath, expectedHash] of Object.entries(manifest)) {
     const filePath = path.join(dataDir, relativePath);
+    let problem = null;
     if (!fs.existsSync(filePath)) {
-      throw new Error(`Data integrity fail: missing file ${relativePath}`);
+      problem = `missing file ${relativePath}`;
+    } else {
+      const actualHash = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+      if (actualHash !== expectedHash) problem = `hash mismatch for ${relativePath}`;
     }
-    const actualHash = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
-    if (actualHash !== expectedHash) {
-      throw new Error(`Data integrity fail: hash mismatch for ${relativePath}`);
+    if (problem) {
+      if (strict) throw new Error(`Data integrity fail: ${problem}`);
+      console.warn(`  ⚠ Data integrity warning: ${problem} (run \`npm run manifest\` to refresh)`);
+      _verifiedDirs.add(dataDir);
+      return false;
     }
   }
+  _verifiedDirs.add(dataDir);
   return true;
 }
 

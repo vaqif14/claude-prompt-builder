@@ -6,7 +6,7 @@
 const MODES = {
   audit: {
     label: 'Audit / Review',
-    keywords: /review|audit|check|confirm|verify|qa|all working|works|işləyir|isleyir|yoxla|tesdiq|təsdiq/,
+    keywords: /\b(?:review|audit|check|confirm|verify|qa)\b|all working|işləyir|isleyir|yoxla|tesdiq|təsdiq/,
     authority: 'Read-only audit and verification. Do not modify files unless explicitly asked after the report.',
     subTasks: [
       'Map the exact route, components, hooks, API calls, translations, and auth assumptions',
@@ -44,7 +44,7 @@ const MODES = {
   },
   bugfix: {
     label: 'Bugfix / Diagnosis',
-    keywords: /fix|bug|error|broken|fail|crash|regression|xəta|sehv|səhv/,
+    keywords: /\b(?:fix|bug|error|broken|fail(?:s|ed|ing|ure)?|crash(?:es|ed|ing)?|regression)\b|xəta|sehv|səhv/,
     authority: 'Diagnose and fix with minimal change. Escalate if root cause is architectural.',
     subTasks: [
       'Reproduce the issue with exact steps',
@@ -80,7 +80,7 @@ const MODES = {
   },
   refactor: {
     label: 'Refactor / Modernize',
-    keywords: /refactor|rewrite|modernize|clean|debt|extract|decouple/,
+    keywords: /\b(?:refactor|rewrite|modernize|clean|debt|extract|decouple)\b/,
     authority: 'Refactor safely with tests as safety net. No behavior change.',
     subTasks: [
       'Map current structure and identify smell',
@@ -115,7 +115,7 @@ const MODES = {
   },
   feature: {
     label: 'Feature Implementation',
-    keywords: /add|implement|create|build|feature|new|support|enable/, // default fallback
+    keywords: /\b(?:add|implement|create|build|rebuild|feature|new|support|enable)\b/, // default fallback
     authority: 'Autonomous execution with human escalation for destructive ops',
     subTasks: [
       'Analyze existing implementations in codebase',
@@ -363,24 +363,6 @@ function inferMode(task, explicitMode) {
   return 'feature';
 }
 
-function inferTemplate(task, explicitTemplate) {
-  // Backward compatibility: map mode to template for CSV loading
-  const mode = inferMode(task, explicitTemplate);
-  const modeToTemplate = {
-    audit: 'audit',
-    bugfix: 'bugfix',
-    refactor: 'refactor',
-    feature: 'feature',
-    'design-review': 'design-review',
-    'architecture-review': 'architecture-review',
-    'security-review': 'security-review',
-    'performance-review': 'performance-review',
-    'release-check': 'release-check',
-    'prd-to-tasks': 'prd-to-tasks',
-  };
-  return modeToTemplate[mode] || 'feature';
-}
-
 function getModeConfig(mode) {
   return MODES[mode] || MODES.feature;
 }
@@ -393,4 +375,4 @@ function listModes() {
   }));
 }
 
-module.exports = { inferMode, inferTemplate, getModeConfig, listModes, MODES };
+module.exports = { inferMode, getModeConfig, listModes, MODES };

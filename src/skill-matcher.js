@@ -4,6 +4,7 @@
  */
 
 const { selectModel } = require('./model-router');
+const { sanitizeShellArg } = require('./sanitize');
 
 function analyzeTask(task) {
   const lower = task.toLowerCase();
@@ -14,14 +15,14 @@ function analyzeTask(task) {
     domains.push({ domain, skill, priority });
   };
 
-  if (/admin|dashboard|analytics|kpi|widget|mui|vuexy|table|chart/.test(lower)) {
+  if (/\b(?:admin|dashboard|analytics|kpi|widgets?|mui|tables?|charts?)\b/.test(lower)) {
     add('admin-ui', 'enterprise-ui-architect', 'high');
   }
-  if (/design|ui|ux|style|css|layout|theme|color|font|responsive|visual|screen/.test(lower)) {
+  if (/\b(?:design|ui|ux|style|css|layout|theme|colou?r|font|responsive|visual|screen)\b/.test(lower)) {
     add('ui-ux', 'ui-ux-pro-max', 'high');
     add('design-polish', 'emil-design-eng', 'high');
   }
-  if (/react|next|component|page|tsx|jsx|frontend|hook|context|dashboard/.test(lower)) {
+  if (/\b(?:react|reactjs|next|nextjs|components?|pages?|tsx|jsx|frontend|hooks?|context|dashboard)\b/.test(lower)) {
     add('frontend-code', 'frontend-patterns', 'high');
   }
   if (/ios|swift|swiftui|xcode|iphone|ipad|visionos|watchos|macos/.test(lower)) {
@@ -41,10 +42,10 @@ function analyzeTask(task) {
   if (/desktop|electron|tauri|native app|cli|command line|terminal/.test(lower)) {
     add('desktop-cli', 'find-skills', 'medium');
   }
-  if (/ai|llm|rag|agent|openai|model|embedding|vector/.test(lower)) {
+  if (/\b(?:ai|llm|rag|agent|openai|model|embedding|vector)\b/.test(lower)) {
     add('ai-app', 'openai-docs', 'high');
   }
-  if (/java|spring|boot/.test(lower)) {
+  if (/\b(?:java|spring|boot)\b/.test(lower)) {
     add('java-backend', 'springboot-patterns', 'high');
   }
   if (/laravel|php/.test(lower)) {
@@ -53,47 +54,47 @@ function analyzeTask(task) {
   if (/python|fastapi|django|flask/.test(lower)) {
     add('python-backend', 'find-skills', 'high');
   }
-  if (/go|golang/.test(lower)) {
+  if (/\bgolang\b|\bgo\b\s+(?:module|service|handler|backend|api|app)|\bgin\b|\bfiber\b/.test(lower)) {
     add('go-backend', 'find-skills', 'high');
   }
-  if (/rust|cargo/.test(lower)) {
+  if (/\b(?:rust|cargo)\b/.test(lower)) {
     add('rust-backend', 'find-skills', 'high');
   }
-  if (/express|node|nodejs/.test(lower)) {
+  if (/\b(?:express|node|nodejs)\b/.test(lower)) {
     add('node-backend', 'frontend-patterns', 'high');
   }
-  if (/nestjs/.test(lower)) {
+  if (/\bnestjs\b/.test(lower)) {
     add('nestjs-backend', 'find-skills', 'high');
   }
   if (/\.net|c#|asp\.net/.test(lower)) {
     add('dotnet-backend', 'find-skills', 'high');
   }
-  if (/rails|ruby/.test(lower)) {
+  if (/\b(?:rails|ruby)\b/.test(lower)) {
     add('ruby-backend', 'find-skills', 'high');
   }
-  if (/backend|api|server|controller|service|repository/.test(lower)) {
+  if (/\b(?:backend|api|server|controller|service|repository)\b/.test(lower)) {
     add('backend-code', 'springboot-patterns', 'high');
   }
-  if (/test|spec|jest|junit|mock|coverage|verify|confirm|working|qa/.test(lower)) {
+  if (/\b(?:tests?|specs?|jest|junit|mock|coverage|verify|confirm|working|qa)\b/.test(lower)) {
     add('verification', 'verification-loop', 'high');
     add('browser-qa', 'browser-qa', 'high');
   }
-  if (/security|auth|jwt|cors|xss|sql|inject/.test(lower)) {
+  if (/\b(?:security|auth|jwt|cors|xss|sql|inject)\b/.test(lower)) {
     add('security', 'springboot-security', 'high');
   }
-  if (/database|db|migration|schema|sql/.test(lower)) {
+  if (/\b(?:database|db|migrations?|schema|sql)\b/.test(lower)) {
     add('database', 'database-migrations', 'medium');
   }
-  if (/postgres|mysql|mongo|redis|prisma|typeorm|jpa|hibernate|supabase|firebase/.test(lower)) {
+  if (/\b(?:postgres|mysql|mongo(?:db)?|redis|prisma|typeorm|jpa|hibernate|supabase|firebase)\b/.test(lower)) {
     add('database-engine', 'postgres-patterns', 'medium');
   }
-  if (/performance|slow|optimize|cache|memory|cpu|lag|bundle|latency|profile/.test(lower)) {
+  if (/\b(?:performance|slow|optimize|cache|caching|memory|cpu|lag|bundle|latency|profile|profiling)\b/.test(lower)) {
     add('performance', 'frontend-patterns', 'medium');
   }
-  if (/microservice|grpc|kafka|rabbitmq|event|message|queue/.test(lower)) {
+  if (/\b(?:microservices?|grpc|kafka|rabbitmq|events?|message|queue)\b/.test(lower)) {
     add('integration', 'api-design', 'medium');
   }
-  if (/refactor|clean|debt|smell|extract|decouple/.test(lower)) {
+  if (/\b(?:refactor|clean|debt|smell|extract|decouple)\b/.test(lower)) {
     add('refactoring', 'java-code-review', 'medium');
   }
 
@@ -103,9 +104,9 @@ function analyzeTask(task) {
 
   // Complexity heuristic based on domain count + task indicators
   const domainCount = domains.length;
-  const hasMultiplePlatforms = /and|plus|\+|with|integrate|between/.test(lower);
-  const hasArchitecturalTerms = /architecture|hexagonal|domain|event sourcing|microservice/.test(lower);
-  const hasLargeScope = /all|every|entire|full|whole|complete/.test(lower);
+  const hasMultiplePlatforms = /\b(?:and|plus|with|integrate|between)\b|\+/.test(lower);
+  const hasArchitecturalTerms = /\b(?:architecture|hexagonal|domain|event sourcing|microservices?)\b/.test(lower);
+  const hasLargeScope = /\b(?:all|every|entire|full|whole|complete)\b/.test(lower);
 
   let complexity = 'Low';
   if (domainCount >= 4 || hasArchitecturalTerms || (hasMultiplePlatforms && domainCount >= 2)) {
@@ -143,15 +144,15 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
     }
   }
 
-  if (/admin|dashboard|analytics|kpi|widget|mui|vuexy|table|chart/.test(lower)) {
+  if (/\b(?:admin|dashboard|analytics|kpi|widgets?|mui|tables?|charts?)\b/.test(lower)) {
     add(
       'enterprise-ui-architect',
-      'admin dashboard structure, MUI/Vuexy composition, enterprise density, tables/cards/charts',
-      'Load this first. Use it to judge layout hierarchy, dashboard information architecture, MUI component discipline, and Vuexy-style admin polish without adding Vuexy as a dependency.'
+      'admin dashboard structure, component-library composition, enterprise density, tables/cards/charts',
+      'Load this first. Use it to judge layout hierarchy, dashboard information architecture, component-system discipline, and enterprise admin polish using the project\'s existing UI kit.'
     );
   }
 
-  if (/design|ui|ux|style|layout|theme|visual|responsive|dashboard|page|screen/.test(lower)) {
+  if (/\b(?:design|ui|ux|style|layout|theme|visual|responsive|dashboard|pages?|screen)\b/.test(lower)) {
     add(
       'ui-ux-pro-max',
       'professional visual design system, spacing rhythm, palette, typography, UX anti-patterns',
@@ -164,7 +165,7 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
     );
   }
 
-  if (/react|next|tsx|frontend|component|hook|context|dashboard|page|screen/.test(lower)) {
+  if (/\b(?:react|reactjs|next|nextjs|tsx|frontend|components?|hooks?|context|dashboard|pages?|screen)\b/.test(lower)) {
     add(
       'frontend-patterns',
       'Next.js/component architecture, hooks, state, i18n, and client/server boundaries',
@@ -172,7 +173,7 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
     );
   }
 
-  if (template === 'audit' || /review|audit|check|confirm|verify|qa|working|all working/.test(lower)) {
+  if (template === 'audit' || /\b(?:review|audit|check|confirm|verify|qa|working)\b|all working/.test(lower)) {
     add(
       'browser-qa',
       'runtime UI proof through browser screenshots, console, network, and responsive checks',
@@ -185,7 +186,7 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
     );
   }
 
-  if (/security|auth|jwt|cors|xss|csrf|permission/.test(lower)) {
+  if (/\b(?:security|auth|jwt|cors|xss|csrf|permissions?)\b/.test(lower)) {
     add(
       'security-review',
       'security and authorization review',
@@ -216,21 +217,21 @@ function getSkillSearchQueries(task, domains, platforms = [], stack = '') {
     queries.add(`${stackName} testing review`);
   }
 
-  if (/admin|dashboard|analytics|kpi|widget|table|chart/.test(lower)) {
+  if (/\b(?:admin|dashboard|analytics|kpi|widgets?|tables?|charts?)\b/.test(lower)) {
     queries.add('enterprise admin dashboard ui review');
     queries.add('dashboard design system charts tables');
   }
-  if (/design|ui|ux|visual|layout|responsive|page|screen/.test(lower)) {
+  if (/\b(?:design|ui|ux|visual|layout|responsive|pages?|screen)\b/.test(lower)) {
     queries.add('ui ux design review');
     queries.add('frontend visual design polish');
   }
-  if (/react|next|tsx|frontend/.test(lower)) {
+  if (/\b(?:react|reactjs|next|nextjs|tsx|frontend)\b/.test(lower)) {
     queries.add('nextjs react frontend best practices');
   }
-  if (/test|qa|verify|confirm|working|browser/.test(lower)) {
+  if (/\b(?:tests?|qa|verify|confirm|working|browser)\b/.test(lower)) {
     queries.add('browser qa playwright verification');
   }
-  if (/security|auth|permission|jwt|xss|csrf/.test(lower)) {
+  if (/\b(?:security|auth|permissions?|jwt|xss|csrf)\b/.test(lower)) {
     queries.add('security review auth frontend');
   }
 
@@ -243,7 +244,7 @@ function getSkillSearchQueries(task, domains, platforms = [], stack = '') {
     queries.add(domain.domain.replace(/-/g, ' '));
   }
 
-  if (queries.size === 0) queries.add(task);
+  if (queries.size === 0) queries.add(sanitizeShellArg(task) || 'software project best practices');
   return [...queries].slice(0, 8);
 }
 
@@ -287,7 +288,7 @@ function getAgentCouncil(task, mode, complexity, options) {
   const agents = [];
   const add = (name, mission, output) => agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
 
-  if (/design|ui|ux|dashboard|page|screen|visual|layout/.test(lower)) {
+  if (/\b(?:design|ui|ux|dashboard|pages?|screen|visual|layout)\b/.test(lower)) {
     add(
       'Lead Product Designer',
       'Judge whether the screen feels professional, coherent, and useful at first glance.',
@@ -295,7 +296,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
     add(
       'Enterprise UI Architect',
-      'Check admin/dashboard composition against MUI/Vuexy-style enterprise patterns.',
+      'Check admin/dashboard composition against established enterprise UI patterns.',
       'Layout map, widget priority, card/table/chart quality, token usage, and component-system violations.'
     );
   }
@@ -306,7 +307,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     'File:line findings, broken assumptions, missing states, risky code paths, and scoped fix plan.'
   );
 
-  if (mode === 'audit' || /review|audit|verify|confirm|working|qa/.test(lower)) {
+  if (mode === 'audit' || /\b(?:review|audit|verify|confirm|working|qa)\b/.test(lower)) {
     add(
       'Browser QA Engineer',
       'Prove runtime behavior with browser evidence.',
@@ -319,7 +320,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (mode === 'security-review' || /security|auth|jwt|xss|csrf/.test(lower)) {
+  if (mode === 'security-review' || /\b(?:security|auth|jwt|xss|csrf)\b/.test(lower)) {
     add(
       'Security Auditor',
       'Review auth, authorization, secrets, XSS/CSRF, and data exposure.',
@@ -327,7 +328,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (mode === 'performance-review' || /performance|slow|optimize|lag/.test(lower)) {
+  if (mode === 'performance-review' || /\b(?:performance|slow|optimize|lag)\b/.test(lower)) {
     add(
       'Performance Engineer',
       'Profile hot paths and measure before/after.',
@@ -335,7 +336,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (mode === 'architecture-review' || /architecture|hexagonal|clean|domain/.test(lower)) {
+  if (mode === 'architecture-review' || /\b(?:architecture|hexagonal|clean|domain)\b/.test(lower)) {
     add(
       'System Architect',
       'Map boundaries, coupling, cohesion, and dependency direction.',
@@ -343,7 +344,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (/backend|api|server|controller|service|repository|endpoint/.test(lower)) {
+  if (/\b(?:backend|api|server|controller|service|repository|endpoint)\b/.test(lower)) {
     add(
       'Backend/API Architect',
       'Review endpoint design, service boundaries, data flow, and contract consistency.',
@@ -351,7 +352,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (/database|db|migration|schema|sql|postgres|mongo|redis|prisma|typeorm|jpa/.test(lower)) {
+  if (/\b(?:database|db|migrations?|schema|sql|postgres|mongo(?:db)?|redis|prisma|typeorm|jpa)\b/.test(lower)) {
     add(
       'Database/Migration Agent',
       'Review schema design, query performance, indexing, and migration safety.',
@@ -359,7 +360,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (/microservice|grpc|kafka|rabbitmq|event|integration|webhook/.test(lower)) {
+  if (/\b(?:microservices?|grpc|kafka|rabbitmq|events?|integration|webhook)\b/.test(lower)) {
     add(
       'Integration/Test Agent',
       'Review cross-service contracts, event flow, idempotency, and test coverage.',
@@ -367,7 +368,7 @@ function getAgentCouncil(task, mode, complexity, options) {
     );
   }
 
-  if (/devops|deploy|ci|cd|pipeline|docker|kubernetes|infra/.test(lower)) {
+  if (/\b(?:devops|deploy|ci|cd|pipeline|docker|kubernetes|infra)\b/.test(lower)) {
     add(
       'DevOps/Release Agent',
       'Review deployment pipeline, env config, rollback, and observability.',
@@ -550,7 +551,7 @@ function getMulticaStyleTaskBoard(task, mode, platforms = []) {
 
 function getDesignerRubric(task) {
   const lower = task.toLowerCase();
-  if (!/design|ui|ux|dashboard|page|screen|visual|layout|admin|component|card/.test(lower)) return [];
+  if (!/\b(?:design|ui|ux|dashboard|pages?|screen|visual|layout|admin|components?|cards?)\b/.test(lower)) return [];
 
   return [
     'First-glance clarity: can a real user understand the page purpose and next action in 5 seconds?',

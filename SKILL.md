@@ -11,6 +11,29 @@ Turn vague user requests into precise, paste-ready orchestration prompts. A prof
 
 Prompt Builder does not do the requested engineering/design work itself. It prepares the next-agent prompt that says which skills to discover, install/load if needed, call, and how to use their outputs. For review requests, require evidence first and never let the prompt claim success upfront.
 
+## How It Works: Understand → Clarify → Conclude
+
+This is the heart of the skill. The user speaks in **plain, natural language** — in any
+language, however casual or vague (`"yoxla bu səhifəni"`, `"bunu düzəlt"`, `"add a timer"`).
+The skill does the work of understanding it **against the real codebase**, not just the words:
+
+1. **Understand the request in plain language.** Accept casual, mixed-language, or
+   underspecified input. Never demand precise phrasing from the user.
+2. **Ground it in the codebase.** Before writing the prompt, read the repo: find the actual
+   route / component / service / file the request is about, the conventions already in use,
+   and the surrounding code. Map the vague intent to concrete `file:line` targets. The CLI
+   heuristics (mode, platform, stack, skills) are a starting point — the codebase is the
+   source of truth.
+3. **Clarify only when genuinely blocked.** If — *after reading the code* — the target,
+   scope, or intended outcome is still ambiguous in a way that changes what gets built, ask
+   the user **one focused question and wait**. Do not guess on decisions the user owns. If
+   the code already makes the intent clear, proceed without asking.
+4. **Conclude with the prompt.** Once the intent is concrete, emit the orchestration prompt
+   (sections below) with the real targets filled in — never a generic, placeholder prompt.
+
+Goal: the user explains normally; the skill understands the codebase and either asks one
+sharp question or hands back a ready, codebase-grounded prompt.
+
 ## Quick Start
 
 ```bash
@@ -59,7 +82,7 @@ Classify the task before writing the prompt:
 - `prd`, `spec`, `break into tasks` -> prd-to-tasks prompt
 - otherwise -> feature/execution prompt
 
-Ask at most one clarifying question only when the target surface cannot be inferred. If the user names a page, route, module, or file, proceed.
+Ask at most one clarifying question, and only after reading the codebase fails to resolve the target surface or intended outcome. If the user names a page, route, module, or file — or the repo makes it obvious — proceed without asking.
 
 ## Professional Prompt Shape
 
@@ -159,23 +182,22 @@ Never allow an audit prompt to modify files unless the user explicitly asks for 
 
 ## Admin Dashboard Special Case
 
-When the task mentions admin dashboard, include these project-aware targets when relevant:
+When the task mentions an admin dashboard, the generated prompt tells the next agent to
+**discover the real targets in the repo it is working in** (do not assume a fixed layout):
 
-- `frontend/src/app/[locale]/(admin)/admin/page.tsx`
-- `frontend/src/features/admin/components/dashboard/`
-- `frontend/src/features/admin/hooks/useAdminDashboard.ts`
-- `frontend/src/features/admin/hooks/useAdminAnalytics.ts`
-- `frontend/src/features/admin/services/admin-client.ts`
-- `frontend/messages/az.json`, `frontend/messages/en.json`, `frontend/messages/ru.json`
-- `docs/reference/frontend-ui-style-contract.md`
+- the admin/dashboard route (e.g. an `(admin)` route group or a dashboard page component)
+- the dashboard data layer: list/query hooks and the API client feeding the widgets
+- the shared UI primitives the dashboard composes (tables, cards, charts)
+- the i18n/translation catalogs, if the app is localized
+- any project UI/style-contract or design-system doc to judge against
 
-Matched skills should usually include:
+Candidate skills (confirm availability via `find-skills`; names may differ across registries):
 
 - `find-skills` for local + ecosystem skill discovery
-- `enterprise-ui-architect` for admin dashboard structure and MUI quality
+- `enterprise-ui-architect` for admin dashboard structure and component-library quality
 - `ui-ux-pro-max` for visual/style-contract review
 - `emil-design-eng` for micro-polish and designer-eye critique
-- `frontend-patterns` for Next.js/component architecture
+- `frontend-patterns` for component architecture
 - `browser-qa` for runtime UI verification
 - `verification-loop` for build/type/lint/test gates
 

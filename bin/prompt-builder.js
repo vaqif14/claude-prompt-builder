@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const { generatePrompt, searchData, validatePrompt, listModes, detectPlatformsMixed } = require('../src/index');
 const { createSession, saveTurn, getSession, listSessions, resumeSession } = require('../src/session-store');
-const { runWithHarness } = require('../src/harness-integration');
+const { categorizeError } = require('../src/error-handler');
 const fs = require('fs');
 const chalk = require('chalk');
 const pkg = require('../package.json');
@@ -137,7 +137,6 @@ function parseArgs(args) {
     listSessions: false,
     model: null,
     help: false,
-    harness: false,
     maxTokens: 3000,
     contextReport: false,
   };
@@ -171,7 +170,6 @@ function parseArgs(args) {
     else if (arg === '--list-sessions') { flags.listSessions = true; }
     else if (arg === '--max-tokens') { flags.maxTokens = parseInt(args[++i], 10); }
     else if (arg === '--context-report') { flags.contextReport = true; }
-    else if (arg === '--harness') { flags.harness = true; }
     else {
       taskWords.push(arg);
     }
@@ -324,58 +322,6 @@ function main() {
     contextReport: flags.contextReport,
   };
 
-  // Harness mode
-  if (flags.harness) {
-    const harnessResult = runWithHarness(effectiveTask, { ...options, sessionId: flags.sessionId });
-
-    if (flags.json) {
-      console.log(JSON.stringify({
-        prompt: harnessResult.prompt,
-        policyChecks: harnessResult.policyChecks,
-        sessionId: harnessResult.sessionId,
-      }, null, 2));
-      process.exit(0);
-    }
-
-    if (flags.save) {
-      if (harnessResult.prompt) {
-        fs.writeFileSync(flags.save, harnessResult.prompt, 'utf-8');
-        console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
-      }
-      console.log(`  ${chalk.gray(`Session: ${harnessResult.sessionId}`)}`);
-      console.log(`  ${chalk.gray(`Policy: ${harnessResult.policyChecks.allowed ? 'PASSED' : 'BLOCKED'} (${harnessResult.policyChecks.policy || 'none'})`)}`);
-      process.exit(0);
-    }
-
-    if (flags.compact) {
-      if (harnessResult.prompt) console.log(harnessResult.prompt);
-      process.exit(0);
-    }
-
-    box('Generated Prompt (Harness Mode)', [
-      chalk.gray('Universal Agent Orchestration Planner'),
-      chalk.gray(`Session: ${harnessResult.sessionId}`),
-      chalk.gray(`Policy: ${harnessResult.policyChecks.allowed ? 'PASSED' : 'BLOCKED'}`),
-    ], harnessResult.policyChecks.allowed ? 'green' : 'red');
-
-    if (harnessResult.prompt) {
-      console.log('');
-      hr('green');
-      console.log(chalk.white(harnessResult.prompt));
-      hr('green');
-    }
-
-    const policyLines = [
-      chalk.gray('Status').padEnd(16) + ' │ ' + (harnessResult.policyChecks.allowed ? chalk.green('ALLOWED') : chalk.red('BLOCKED')),
-      chalk.gray('Policy').padEnd(16) + ' │ ' + chalk.white(harnessResult.policyChecks.policy || 'none'),
-      chalk.gray('Reason').padEnd(16) + ' │ ' + chalk.white(harnessResult.policyChecks.reason || 'N/A'),
-      chalk.gray('Session ID').padEnd(16) + ' │ ' + chalk.cyan(harnessResult.sessionId),
-    ];
-    box('Harness Policy Check', policyLines, harnessResult.policyChecks.allowed ? 'gray' : 'red');
-
-    process.exit(0);
-  }
-
   const result = generatePrompt(effectiveTask, options);
 
   // Persist session best-effort. Prompt generation must not fail because local
@@ -389,7 +335,8 @@ function main() {
     sessionPersisted = true;
   } catch (error) {
     if (flags.sessionId || flags.listSessions) {
-      console.error(chalk.yellow(`  ⚠ Session persistence unavailable: ${error.message}`));
+      const categorized = categorizeError(error);
+      console.error(chalk.yellow(`  ⚠ Session persistence unavailable (${categorized.category}): ${categorized.description}`));
     }
     sessionId = sessionId || 'not-persisted';
   }

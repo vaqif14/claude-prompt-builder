@@ -69,6 +69,19 @@ test('detectStack returns general for unknown', () => {
   assert.strictEqual(detectStack('do something'), 'general');
 });
 
+// Regression: \b must not drop suffixed framework names
+test('detectStack resolves nextjs (not general) for "upgrade nextjs"', () => {
+  assert.strictEqual(detectStack('upgrade nextjs'), 'nextjs');
+});
+
+test('detectStack resolves nestjs for "nestjs module"', () => {
+  assert.strictEqual(detectStack('nestjs module'), 'nestjs');
+});
+
+test('detectStack does NOT mistake "email validation" for ai-app', () => {
+  assert.notStrictEqual(detectStack('email validation'), 'ai-app');
+});
+
 test('all platforms have required fields', () => {
   for (const p of PLATFORM_REGISTRY) {
     assert(p.id, `Platform missing id`);

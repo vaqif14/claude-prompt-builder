@@ -264,7 +264,7 @@ function detectStack(task) {
   if (/\bdesktop\b|\belectron\b|\btauri\b|\bnative\s+app\b/.test(lower)) return 'desktop';
   if (/\bai\b|\bllm\b|\brag\b|\bagent\b|\bopenai\b|\bmodel\b|\bembedding\b|\bvector\b/.test(lower)) return 'ai-app';
   if (/\bdocker\b|\bdeploy\b|\bvercel\b|\bci\/cd\b|\bpipeline\b|\bkubernetes\b|\binfra\b|\bdevops\b/.test(lower)) return 'devops';
-  if (/\breact\b|\bnext\b|\btsx\b|\bfrontend\b|\bshadcn\b|\bmui\b|\bdashboard\b|\badmin\b|\bpage\b|\bcomponent\b|\bcard\b/.test(lower)) return 'nextjs';
+  if (/\breactjs?\b|\bnextjs?\b|\btsx\b|\bfrontend\b|\bshadcn\b|\bmui\b|\bdashboard\b|\badmin\b|\bpages?\b|\bcomponents?\b|\bcards?\b/.test(lower)) return 'nextjs';
   if (/\bbackend\b|\bapi\b|\bserver\b/.test(lower)) return 'spring-boot';
   return 'general';
 }

@@ -4,7 +4,6 @@
   <a href="https://www.npmjs.com/package/@vaqif14/prompt-builder"><img src="https://img.shields.io/npm/v/@vaqif14/prompt-builder?style=for-the-badge&color=blue&logo=npm" alt="npm version"></a>
   <img src="https://img.shields.io/badge/platforms-18-green?style=for-the-badge" alt="18 Platforms">
   <img src="https://img.shields.io/badge/modes-10-purple?style=for-the-badge" alt="10 Modes">
-  <img src="https://img.shields.io/badge/agent_harness-7_layers-orange?style=for-the-badge" alt="7-Layer Agent Harness">
   <a href="https://github.com/vaqif14/claude-prompt-builder/blob/main/LICENSE"><img src="https://img.shields.io/github/license/vaqif14/claude-prompt-builder?style=for-the-badge&color=green" alt="License"></a>
 </p>
 
@@ -14,6 +13,8 @@
 </p>
 
 Turn vague tasks like `"yoxla bu səhifəni"` or `"timer əlavə et"` into professional, paste-ready **agent orchestration prompts**. Auto-detects platform, discovers skills, assigns agents, and builds a task board.
+
+> **Note:** the generated prompt is plain Markdown that any coding agent can consume, but it is **optimized for Claude Code and its skills ecosystem** (`find-skills`, `npx skills`, `/reload-skills`). On other agents the skill-install/load steps are simply optional recommendations.
 
 ---
 
@@ -39,7 +40,7 @@ This project uses a layered documentation hierarchy. Start at the top and dive d
 
 ```bash
 # One-shot (no install)
-npx @vaqif14/prompt-builder "design auction card component"
+npx @vaqif14/prompt-builder "design pricing card component"
 
 # Global install
 npm install -g @vaqif14/prompt-builder
@@ -57,11 +58,8 @@ prompt-builder --mode security-review "audit auth flow"
 # Save to file
 prompt-builder --save prompt.txt "refactor api"
 
-# Harness mode with policy checks
-prompt-builder --harness "implement checkout flow"
-
 # Token-budget aware generation
-prompt-builder --max-tokens 2000 "design auction card"
+prompt-builder --max-tokens 2000 "design pricing card"
 
 # Resume previous session
 prompt-builder --session-id sess_xxx "continue implementation"
@@ -79,10 +77,9 @@ prompt-builder --session-id sess_xxx "continue implementation"
 - **Validation V2** — Quality scoring (100 pts) replacing trivial presence checks
 - **30+ Stack Profiles** — Stack-specific best practices, anti-patterns, and verification gates
 - **Model Selection** — Auto-routes to Haiku/Sonnet/Opus by complexity (`--model` override)
-- **Agent Harness** — Policy checks, pre/post hooks, session state (`--harness`)
 - **Session Memory** — JSON-backed session store with resume (`--session-id`, `--list-sessions`)
 - **Token Budgeting** — Context-aware section compression (`--max-tokens`, `--context-report`)
-- **Security Hardening** — CSV sanitization, SHA-256 manifest, prompt injection guards
+- **Security Hardening** — Untrusted task text neutralized (control/ANSI stripped, section-forging blocked), CSV sanitization, SHA-256 data manifest
 - **1.6.0 Roadmap** — Anthropic/X-backed plan for workflow routing, context diet scoring, hackathon mode, MCP readiness, and skill bloat review
 
 ---

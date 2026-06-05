@@ -37,7 +37,6 @@ module.exports = {
   detectPlatformsMixed: platformDetector.detectPlatformsMixed,
   detectStack: platformDetector.detectStack,
   inferMode: modeRouter.inferMode,
-  inferTemplate: modeRouter.inferTemplate,
   getModeConfig: modeRouter.getModeConfig,
   listModes: modeRouter.listModes,
   analyzeTask: skillMatcher.analyzeTask,

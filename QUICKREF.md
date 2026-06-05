@@ -14,7 +14,7 @@ npm install -g @vaqif14/prompt-builder
 
 ```bash
 # Auto-detect mode and platform
-prompt-builder "design auction card component"
+prompt-builder "design pricing card component"
 
 # Explicit mode
 prompt-builder --mode design-review "review checkout screen"
@@ -51,7 +51,7 @@ prompt-builder --validate prompt.txt
 const { generatePrompt, platformDetector, modeRouter, skillMatcher } = require('@vaqif14/prompt-builder');
 
 // Generate prompt
-const result = generatePrompt("design auction card", { mode: 'design-review' });
+const result = generatePrompt("design pricing card", { mode: 'design-review' });
 console.log(result.prompt);
 console.log(result.metadata.platforms);  // ['web']
 console.log(result.metadata.mode);       // 'design-review'
@@ -118,13 +118,13 @@ web, backend, ios, android, flutter, react-native, desktop, cli, devops, ai, lar
 | `src/skill-matcher.js` | Skill mapping, agent council, task board |
 | `src/prompt-assembler.js` | Prompt generation |
 | `src/stack-cache.js` | Project stack profile MD cache |
+| `src/model-router.js` | Complexity-based model selection |
+| `src/context-manager.js` | Token budgeting + section priorities |
+| `src/sanitize.js` | CSV sanitization + untrusted-task neutralization |
+| `src/session-store.js` | Session persistence (~/.prompt-builder) |
+| `src/error-handler.js` | Structured error categorization |
 | `scripts/validate.js` | Validation V2 (quality scoring) |
-| `scripts/harness.js` | Agent harness engine |
-| `scripts/tool-registry.js` | Tool catalog |
-| `scripts/policy-engine.js` | PreToolUse hooks |
-| `scripts/state-manager.js` | Session persistence |
-| `scripts/error-handler.js` | Structured error handling |
-| `scripts/safety-monitor.js` | Circuit breaker + limits |
+| `scripts/generate-manifest.js` | Rebuild data SHA-256 manifest |
 
 ---
 

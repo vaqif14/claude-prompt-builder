@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { inferMode, inferTemplate, getModeConfig, listModes, MODES } = require('../src/mode-router');
+const { inferMode, getModeConfig, listModes, MODES } = require('../src/mode-router');
 
 function test(name, fn) {
   try {
@@ -67,8 +67,33 @@ test('listModes returns all modes', () => {
   assert.strictEqual(modes.length, Object.keys(MODES).length);
 });
 
-test('inferTemplate maps design-review to design-review CSV', () => {
-  assert.strictEqual(inferTemplate('review checkout', 'design-review'), 'design-review');
+// Regression: word-boundary keyword matching (substring no longer misroutes)
+test('inferMode: "implement checkout flow" is feature, not audit (check⊂checkout)', () => {
+  assert.strictEqual(inferMode('implement checkout flow'), 'feature');
+});
+
+test('inferMode: "add checkbox to form" is feature (check⊂checkbox)', () => {
+  assert.strictEqual(inferMode('add checkbox to form'), 'feature');
+});
+
+test('inferMode: "build a workspace switcher" is feature (works⊂workspace)', () => {
+  assert.strictEqual(inferMode('build a workspace switcher'), 'feature');
+});
+
+test('inferMode: "create works order tracker" is feature, not audit', () => {
+  assert.strictEqual(inferMode('create works order tracker'), 'feature');
+});
+
+test('inferMode guard: "review admin dashboard" still audit', () => {
+  assert.strictEqual(inferMode('review admin dashboard'), 'audit');
+});
+
+test('inferMode guard: "confirm all working" still audit', () => {
+  assert.strictEqual(inferMode('confirm that all working'), 'audit');
+});
+
+test('inferMode guard: "fix failing crash" still bugfix (fail suffix kept)', () => {
+  assert.strictEqual(inferMode('fix failing tests'), 'bugfix');
 });
 
 console.log('');

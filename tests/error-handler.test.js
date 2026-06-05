@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { categorizeError, ERROR_CATEGORIES } = require('../scripts/error-handler');
+const { categorizeError, ERROR_CATEGORIES } = require('../src/error-handler');
 
 function test(name, fn) {
   try {

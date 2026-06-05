@@ -1,6 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { neutralizeUserText } = require('./sanitize');
 
 const DEFAULT_CACHE_DIR = '.prompt-builder/stack-profiles';
 const MAX_SKILL_FILES = 500;
@@ -162,7 +163,7 @@ function buildStackProfileMarkdown(input) {
     '',
     `Generated: ${generatedAt}`,
     `Generator: @vaqif14/prompt-builder ${pkg.version}`,
-    `Seed task: ${task}`,
+    `Seed task: ${neutralizeUserText(task)}`,
     '',
     '## Reuse Contract',
     '',

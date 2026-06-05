@@ -1,26 +1,25 @@
 category,key,value
 Stack,Framework,Next.js App Router
 Stack,Language,TypeScript strict
-Stack,StateAdmin,TanStack Query
-Stack,StateBidder,Zustand
-Stack,UI,MUI v7 + shadcn primitives + CSS variables
-Stack,Realtime,STOMP WebSocket
+Stack,ServerState,TanStack Query or framework data fetching
+Stack,ClientState,Zustand or context for ephemeral UI/realtime state
+Stack,UI,Component library of choice (MUI / shadcn / Tailwind)
 Architecture,Pattern,Feature-based slices
-Architecture,Routing,App Router with i18n
-Architecture,State,Zustand owns bidder real-time state
+Architecture,Routing,App Router (optionally with i18n)
+Architecture,Rendering,Server Components by default; Client Components only where needed
 Conventions,Components,strict TypeScript no any
 Conventions,Imports,absolute paths via tsconfig
-Conventions,i18n,translations added to messages files
-Testing,Unit,project package scripts
+Conventions,i18n,translations added to locale message files
+Testing,Unit,project package scripts (Vitest / Jest)
 Testing,E2E,Playwright
-Skills,Required,frontend-patterns ui-ux-pro-max enterprise-ui-architect
+Skills,Required,frontend-patterns ui-ux-pro-max
 BestPractices,App Router,Respect server/client boundaries and keep data fetching close to route ownership
-BestPractices,State,Use TanStack Query for server state and keep Zustand for client realtime state only
+BestPractices,State,Use a server-state library for server data and keep client stores for UI/realtime state only
 BestPractices,i18n,Update all locale message files when visible copy changes
-BestPractices,UI,Use existing design tokens MUI primitives and shadcn components consistently
-AntiPatterns,Use Vuexy only as visual composition reference
-AntiPatterns,Do NOT add Vuexy Vuetify npm dependency
-AntiPatterns,Do NOT duplicate API clients
+BestPractices,UI,Use existing design tokens and component primitives consistently
+AntiPatterns,Do NOT mix server-state and client-state ownership for the same data
+AntiPatterns,Do NOT duplicate API clients across features
+AntiPatterns,Do NOT add a second UI kit or toast library without a decision record
 Verification,Type Check,npm run typecheck or project equivalent
 Verification,Lint,npm run lint
 Verification,Build,npm run build when dependencies and network allow

@@ -331,13 +331,13 @@ Detect these signals from conversation history, AGENTS.md, and code style:
 
 | Smell | Problem | Fix |
 |-------|---------|-----|
-| **Vague Mission** | "Fix the bug" | "Fix race condition in bid placement causing duplicate bids" |
+| **Vague Mission** | "Fix the bug" | "Fix race condition in the payment handler causing duplicate charges" |
 | **No Constraints** | Agent modifies anything | Explicit file whitelist + forbidden actions |
 | **No Acceptance** | "Make it work" | Measurable criteria: "Response time <200ms", "Zero TypeScript errors" |
-| **Context Dump** | Pasting 500 lines of code | "See `src/services/bid.ts` for current logic" |
+| **Context Dump** | Pasting 500 lines of code | "See `src/services/<relevant-service>` for current logic" |
 | **Mixed Altitudes** | "Architect AND implement" | Split: Task 1 = design, Task 2 = implement |
 | **No Rollback** | Irreversible changes | "Each commit must be revertible; feature flag required" |
-| **Ambiguous Pronouns** | "Update it" | "Update `AuctionTimer` component in `src/components/auction/`" |
+| **Ambiguous Pronouns** | "Update it" | "Update the `SessionTimer` component in `src/components/`" |
 | **Missing Stop Clause** | Agent deletes production DB | "STOP and ask before any database migration" |
 
 ---
@@ -346,48 +346,46 @@ Detect these signals from conversation history, AGENTS.md, and code style:
 
 ### User Request (Before)
 
-> "auksiyonda timer elave et"
+> "add a countdown timer to the checkout"
 
 ### Generated Prompt (After)
 
 ```text
 Role: Senior Frontend Engineer (Next.js, React, TypeScript)
-Mission: Implement a real-time countdown timer for auction lots that
-syncs with server time and handles edge cases (auction ended, extended,
-pause).
+Mission: Implement a real-time countdown timer for a time-limited checkout
+that syncs with server time and handles edge cases (expired, extended, pause).
 
 User Profile:
 - Prefers execution-first, iterative delivery
 - Strict TypeScript (no `any`)
 - Tests for all new hooks and components
-- Azerbaijani/Turkish communication preferred
 - Changelog updates per package
 
 Codebase Profile:
-- Stack: Next.js 14 App Router, TanStack Query, Zustand, STOMP WebSocket
-- UI: shadcn/ui + Material 3 tokens, Vuexy-like density
-- State: Zustand store owns bidder real-time state (see src/realtime/)
+- Stack: Next.js App Router, TanStack Query, client store for ephemeral state
+- UI: the project's existing component library and design tokens
+- State: server state via TanStack Query; client store owns realtime/ephemeral state
 - Patterns: Feature-based slices under src/features/, hooks under src/hooks/
-- Tests: Jest for unit, Playwright for E2E
+- Tests: unit runner + Playwright for E2E
 
 Sub-tasks:
 1. Analyze existing timer implementations in codebase (if any)
-2. Create useAuctionTimer hook in src/hooks/ with:
-   - server time sync via STOMP
+2. Create useCountdownTimer hook in src/hooks/ with:
+   - server time sync via the project's realtime channel
    - countdown logic with drift correction
    - states: running, paused, extended, ended
-3. Create AuctionTimer component in src/components/auction/
+3. Create CountdownTimer component in src/components/
    - displays HH:MM:SS format
    - visual states: normal, warning (<1min), ended
    - accessible (aria-live region for screen readers)
-4. Integrate timer into lot detail page (src/app/[locale]/auctions/[id]/)
+4. Integrate timer into the checkout page
 5. Add unit tests for hook logic (edge cases: timezone, drift, negative)
 6. Add i18n keys for timer states
 
 Constraints:
-- Do NOT modify backend auction logic (read-only from STOMP)
-- Do NOT add new npm dependencies (use existing date-fns if present)
-- Follow existing hook pattern in src/hooks/useRealtime.ts
+- Do NOT modify backend logic (treat the realtime feed as read-only)
+- Do NOT add new npm dependencies (reuse an existing date utility if present)
+- Follow the existing realtime hook pattern in the repo
 - All new code must pass npm run lint && npm run type-check
 
 Tool Permissions:
@@ -399,15 +397,15 @@ Tool Permissions:
 Acceptance Criteria:
 - [ ] Timer displays correct remaining time synced to server
 - [ ] Visual state changes at <1 minute (warning color)
-- [ ] Timer handles auction extension without page refresh
+- [ ] Timer handles extension without page refresh
 - [ ] Screen readers announce time changes (aria-live)
 - [ ] Unit tests cover: normal countdown, drift correction, ended state
 - [ ] No TypeScript errors, no lint errors
-- [ ] CHANGELOG.md updated in frontend/
+- [ ] CHANGELOG.md updated
 
 Stop and Ask:
 - Before modifying any existing shared hook or component
-- If server time sync endpoint does not exist or differs from assumption
+- If the server time sync endpoint does not exist or differs from assumption
 
 Output Format:
 For each sub-task:
