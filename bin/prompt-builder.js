@@ -103,7 +103,10 @@ function printMetadataCard(meta, validation) {
     chalk.gray('Platforms').padEnd(16) + ' │ ' + chalk.white(meta.platforms?.join(', ') || 'general'),
     chalk.gray('Complexity').padEnd(16) + ' │ ' + chalk.yellow(meta.complexity),
     chalk.gray('Context Size').padEnd(16) + ' │ ' + chalk.yellow(meta.contextSize),
-    chalk.gray('Validation').padEnd(16) + ' │ ' + scoreColor(`${validation.score}/100`),
+    chalk.gray('Scaffold').padEnd(16) + ' │ ' + scoreColor(`${validation.score}/100`),
+    chalk.gray('Solution').padEnd(16) + ' │ ' + (validation.solutionReadiness === 'ready'
+      ? chalk.green('READY')
+      : chalk.yellow(`${(validation.solutionReadiness || 'draft').toUpperCase()} — fill PROBLEM ANALYSIS from the code`)),
     chalk.gray('Agents').padEnd(16) + ' │ ' + chalk.white(meta.agents),
     chalk.gray('Read-only').padEnd(16) + ' │ ' + chalk.white(meta.readOnly ? 'Yes' : 'No'),
     chalk.gray('Stack Profile').padEnd(16) + ' │ ' + chalk.white(meta.stackProfile ? `${meta.stackProfile.status}: ${meta.stackProfile.path}` : 'Disabled'),
@@ -375,7 +378,10 @@ function main() {
   if (flags.save) {
     fs.writeFileSync(flags.save, result.prompt, 'utf-8');
     console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
-    console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Validation: ${result.validation.score}/100`)}`);
+    console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Scaffold: ${result.validation.score}/100 | Solution: ${(result.validation.solutionReadiness || 'draft').toUpperCase()}`)}`);
+    if ((result.validation.solutionReadiness || 'draft') !== 'ready') {
+      console.log(`  ${chalk.yellow('→ DRAFT:')} ${chalk.gray('open the resolved targets, fill PROBLEM ANALYSIS (root cause + concrete fix), then this prompt is ready.')}`);
+    }
     if (result.metadata.stackProfile) {
       console.log(`  ${chalk.gray(`Stack profile: ${result.metadata.stackProfile.status} ${result.metadata.stackProfile.path}`)}`);
     }

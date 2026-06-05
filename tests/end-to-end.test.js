@@ -97,4 +97,30 @@ test('all prompts have no [stack] placeholder', () => {
   }
 });
 
+test('every prompt carries a PROBLEM ANALYSIS diagnostic center', () => {
+  for (const tc of TEST_CASES) {
+    const result = generatePrompt(tc.task, tc.options || {});
+    assert(/PROBLEM ANALYSIS/.test(result.prompt), `PROBLEM ANALYSIS missing in "${tc.name}"`);
+    assert(/<RESOLVE/.test(result.prompt), `expected <RESOLVE> slots in "${tc.name}"`);
+  }
+});
+
+test('unfilled CLI scaffold reports solutionReadiness=draft (the 100/100 is not "done")', () => {
+  const result = generatePrompt('refactor the payment service', {});
+  const v = validatePrompt(result.prompt);
+  assert.strictEqual(v.solutionReadiness, 'draft',
+    `expected draft (unfilled <RESOLVE>), got ${v.solutionReadiness}`);
+});
+
+test('a filled prompt (real path:line, no <RESOLVE>) reports solutionReadiness=ready', () => {
+  const result = generatePrompt('refactor the payment service', {});
+  // simulate the SKILL filling the diagnostic center after reading the code
+  const filled = result.prompt
+    .replace(/<RESOLVE[^>]*>/g, 'PaymentService.java:142 — duplicated retry block; extract retry() helper')
+    .replace(/PROBLEM ANALYSIS[^\n]*/, 'PROBLEM ANALYSIS (filled) src/PaymentService.java:142');
+  const v = validatePrompt(filled);
+  assert.strictEqual(v.solutionReadiness, 'ready',
+    `expected ready after fill, got ${v.solutionReadiness}`);
+});
+
 console.log('');

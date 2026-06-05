@@ -60,6 +60,13 @@ function validatePrompt(promptText) {
     points: 8,
   });
 
+  // 7b. Diagnostic center (6 pts): the prompt must carry a Problem Analysis / solution-direction
+  // section — orchestration scaffold without a diagnosis is the failure mode this tool exists to
+  // avoid. Presence is scored here; whether it is FILLED is reported as solutionReadiness below
+  // (the CLI emits <RESOLVE> slots; the invoking skill fills them after reading the code).
+  const hasProblemSection = /PROBLEM ANALYSIS/i.test(p);
+  checks.push({ pass: hasProblemSection, label: 'Problem-analysis & solution-direction section present', points: 6 });
+
   // 8. Prompt Length (8 pts)
   const tokens = Math.ceil(p.length / 4);
   const lengthOk = tokens > 200 && tokens < 6000;
@@ -92,6 +99,17 @@ function validatePrompt(promptText) {
   if (score >= 80) grade = 'pass';
   else if (score >= 60) grade = 'warn';
 
+  // Solution-readiness is ORTHOGONAL to the scaffold score. The score measures whether the
+  // orchestration scaffold is well-formed; readiness measures whether the diagnostic center
+  // has actually been filled from the code. A 100/100 scaffold with an unfilled PROBLEM
+  // ANALYSIS is a DRAFT, not a finished prompt — surfacing this stops the score from reading
+  // as "done". 'ready' requires the section present, no <RESOLVE> slots left, and at least one
+  // concrete path:line token (a real diagnosis cites a line, not just the words "file:line").
+  const hasUnresolved = /<RESOLVE/i.test(p);
+  const hasConcreteLocation = /[\w./-]+\.[A-Za-z]{1,5}:\d+/.test(p);
+  const solutionReadiness = !hasProblemSection ? 'missing'
+    : (hasUnresolved || !hasConcreteLocation) ? 'draft' : 'ready';
+
   return {
     checks,
     passed: checks.filter(c => c.pass).length,
@@ -100,6 +118,7 @@ function validatePrompt(promptText) {
     grade,
     earnedPoints,
     totalPoints,
+    solutionReadiness,
   };
 }
 
@@ -109,8 +128,17 @@ function formatReport(result) {
   const bold = '\x1b[1m';
 
   let out = `\n  ${bold}🛡️  Validation Report V2${reset}\n`;
-  out += `  ${bold}Score:${reset} ${gradeColor}${result.score}/100${reset} (${result.earnedPoints}/${result.totalPoints} pts)\n`;
-  out += `  ${bold}Grade:${reset} ${gradeColor}${result.grade.toUpperCase()}${reset}\n\n`;
+  out += `  ${bold}Scaffold:${reset} ${gradeColor}${result.score}/100${reset} (${result.earnedPoints}/${result.totalPoints} pts)\n`;
+  out += `  ${bold}Grade:${reset} ${gradeColor}${result.grade.toUpperCase()}${reset}\n`;
+  if (result.solutionReadiness) {
+    const r = result.solutionReadiness;
+    const rColor = r === 'ready' ? '\x1b[32m' : '\x1b[33m';
+    const note = r === 'ready' ? 'diagnosis + concrete fix filled'
+      : r === 'draft' ? 'PROBLEM ANALYSIS not filled — open the targets and write the root cause + fix'
+        : 'no PROBLEM ANALYSIS section';
+    out += `  ${bold}Solution:${reset} ${rColor}${r.toUpperCase()}${reset} — ${note}\n`;
+  }
+  out += '\n';
 
   for (const c of result.checks) {
     const icon = c.pass ? '\x1b[32m✅\x1b[0m' : '\x1b[31m❌\x1b[0m';

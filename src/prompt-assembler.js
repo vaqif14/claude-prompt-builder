@@ -297,6 +297,35 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  // The diagnostic center. Orchestration scaffold is worthless without it: the agent that
+  // produces this prompt MUST open the resolved targets, diagnose the real problem, and
+  // state the concrete fix — not punt all understanding to the next agent. The CLI cannot
+  // read code (it greps), so it emits <RESOLVE> slots; the SKILL (running in Claude Code,
+  // which CAN read files) fills them before handing the prompt off. Solution-readiness in
+  // the validator flips to "ready" only once these are filled.
+  promptSections.push({
+    name: 'PROBLEM ANALYSIS',
+    lines: [
+      '═══════════════════════════════════════════════════════════════',
+      `  PROBLEM ANALYSIS${isReadOnly ? '' : ' & SOLUTION DIRECTION'} — fill from the code; the prompt is NOT done while this is empty`,
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      'This is the center of the prompt. OPEN the resolved target file(s) above and replace every',
+      '<RESOLVE …> below with a concrete, code-grounded statement. A prompt that still contains',
+      '<RESOLVE …> here — or that uses generic verbs ("identify the smell", "map the structure") in',
+      'place of a real finding — is UNFINISHED: do not hand it off or act on it.',
+      '',
+      `  • Root cause / primary ${isReadOnly ? 'finding' : 'problem'} (path:line): <RESOLVE — read the file, name the actual ${isReadOnly ? 'issue at a line, or confirm there is none' : 'smell/bug at a line'}>`,
+      '  • Why it matters in THIS code (concrete, not a generic rule): <RESOLVE — the real consequence here>',
+      ...(isReadOnly
+        ? ['  • Required fix direction IF an issue exists (specific): <RESOLVE — name the edit, e.g. "route identity through BidderLabelChip at <file:line>"; or "no change — evidence below">']
+        : ['  • Solution direction (specific edit): <RESOLVE — e.g. "extract <method> from <file:line>", "split <class> into <X>/<Y>", "fix N+1 at <line> with JOIN FETCH", "change <A> → <B>">',
+           '  • First file:line to edit: <RESOLVE>']),
+      '  • Invariants the change must preserve (from GROUNDED TARGETS / hard rules): <RESOLVE>',
+      '',
+    ],
+  })
+
   if (!isReadOnly) {
     promptSections.push({
       name: 'WRITE SAFETY GATE',

@@ -9,7 +9,7 @@ description: Build professional, paste-ready orchestration prompts for coding ag
 
 Turn vague user requests into precise, paste-ready orchestration prompts. A professional prompt must define role, mission, target surface, skill discovery preflight, required skills to invoke, agent review passes, allowed tools, stop conditions, verification gates, and output format.
 
-Prompt Builder does not do the requested engineering/design work itself. It prepares the next-agent prompt that says which skills to discover, install/load if needed, call, and how to use their outputs. For review requests, require evidence first and never let the prompt claim success upfront.
+Prompt Builder does not *implement* the change (it does not edit files or ship the fix). But it MUST do the understanding: read the target code, diagnose the actual problem, and write the concrete solution direction into the prompt ("the root cause is X at `file:line`; the fix is to change A→B / extract Y / split Z"). It is a *diagnosis-and-prescription* tool, not just a routing manifest — a prompt that only says "go find the problem and figure out the fix" has failed. It then also prepares the orchestration around that solution: which skills to discover/install/call, in what order, with what evidence. For review requests, require evidence first and never let the prompt claim success upfront.
 
 ## How It Works: Understand → Clarify → Conclude
 
@@ -28,19 +28,30 @@ The skill does the work of understanding it **against the real codebase**, not j
    scope, or intended outcome is still ambiguous in a way that changes what gets built, ask
    the user **one focused question and wait**. Do not guess on decisions the user owns. If
    the code already makes the intent clear, proceed without asking.
-4. **Conclude with the prompt.** Once the intent is concrete, emit the orchestration prompt
-   (sections below) with the real targets filled in — never a generic, placeholder prompt.
+4. **Diagnose and write the solution.** This is the step that separates a useful prompt from
+   orchestration ceremony. Open the resolved target file(s) and actually read them. Then fill
+   the `PROBLEM ANALYSIS & SOLUTION DIRECTION` section with a concrete, code-grounded diagnosis:
+   the root cause at a real `path:line`, why it matters *in this code*, and the specific fix to
+   apply ("extract `X` from `file:line`", "split this 700-line god-class into A/B/C", "fix the
+   N+1 at `line` with a JOIN FETCH", "change `A` → `B`"). The prompt must carry the *solution
+   direction*, not just a map and a "go figure it out".
+5. **Conclude with the prompt.** Once targets are resolved and the diagnosis is written, emit
+   the orchestration prompt (sections below) — never a generic, placeholder prompt.
 
-**Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact. It emits a
-`GROUNDING CONTRACT` block listing the targets that still need resolving. Do NOT hand the
-prompt back to the user while those are unresolved — replace the generic "Map target route…"
-sub-tasks and the `GROUNDING CONTRACT` slots with concrete `file:line` targets you found by
-reading the repo. If the named entry point is a redirect / barrel / re-export, resolve to the
-true rendering surface first (e.g. a `page.tsx` that just `redirect()`s elsewhere). Detect the
-package manager / build tool from the lockfile and state the real verification commands.
+**Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact (its own summary prints
+`Solution: DRAFT` until you fill it). Do NOT hand the prompt back while it is a draft:
 
-Goal: the user explains normally; the skill understands the codebase and either asks one
-sharp question or hands back a ready, codebase-grounded prompt.
+- Resolve every `GROUNDING CONTRACT` slot and the `<RESOLVE …>` markers to concrete `file:line`
+  targets you found by reading the repo. If the named entry point is a redirect / barrel /
+  re-export, resolve to the true implementation first (e.g. a `page.tsx` that just `redirect()`s).
+- **Fill `PROBLEM ANALYSIS & SOLUTION DIRECTION` from code you actually read** — a real root
+  cause + a named, specific fix. A prompt whose PROBLEM ANALYSIS still contains `<RESOLVE …>`, or
+  that substitutes generic verbs ("identify the smell", "map the structure") for a real finding,
+  is **unfinished — do not emit it**.
+- Detect the package manager / build tool from the lockfile and state the real verification commands.
+
+Goal: the user explains normally; the skill reads the code, names the actual problem and its fix,
+and hands back a ready, solution-grounded prompt — not a routing manifest.
 
 ## Quick Start
 

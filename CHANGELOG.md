@@ -4,6 +4,41 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-06
+
+Solution-based prompts. A three-agent adversarial review of the real output reached a
+unanimous verdict: the generated prompt was orchestration **ceremony with an empty
+diagnostic center** — it echoed the task back, listed files, and punted 100% of the
+understanding (root cause + the actual fix) to the next agent. Worse, the `100/100`
+validator was theater: it only regex-checks that section headers exist, so a prompt about
+the wrong file scored 100. This release adds the missing center and makes the score honest.
+
+### Added
+
+- **`PROBLEM ANALYSIS & SOLUTION DIRECTION` section** (priority-0, right after the grounding
+  contract). The diagnostic center the tool was missing: root cause at a real `path:line`,
+  why it matters *in this code*, the concrete fix to apply ("extract X", "split this
+  god-class", "fix the N+1 at line L", "change A→B"), the first file to edit, and the
+  invariants the fix must preserve. Mode-aware: write modes get "solution direction + first
+  edit"; read-only audits get "required fix direction if an issue exists, or confirm there is
+  none". The CLI (grep-only, cannot read code) emits `<RESOLVE …>` slots; the SKILL — which
+  runs in Claude Code and CAN read files — fills them from the actual code before emitting.
+- **Solution-readiness signal** in the validator and CLI summary: `DRAFT` (slots unfilled or
+  no concrete `path:line`) vs `READY` (diagnosis + fix filled). Reported alongside the
+  scaffold score so `100/100` no longer reads as "done" — a grounded scaffold with an
+  unfilled diagnosis now prints `Scaffold: 100/100 | Solution: DRAFT` with a fill prompt.
+
+### Changed
+
+- **SKILL.md is now diagnosis-first.** "Understand → Clarify → Conclude" gains an explicit
+  **Diagnose** step, and the Conclude hard-gate forbids emitting a prompt whose PROBLEM
+  ANALYSIS still contains `<RESOLVE …>` or generic verbs ("identify the smell", "map the
+  structure") when the file is readable. The Core Rule is reconciled: the builder does not
+  *implement* the change, but it MUST read the code, diagnose the real problem, and prescribe
+  the fix — it is a diagnosis-and-prescription tool, not a routing manifest.
+- Validator scores the diagnostic center's presence (6 pts) and reports readiness; the
+  scaffold score is now labeled "Scaffold" in reports to stop it masquerading as completion.
+
 ## [1.7.2] - 2026-06-06
 
 Grounding now DRIVES detection instead of sitting beside it. A real-user test (Azerbaijani
