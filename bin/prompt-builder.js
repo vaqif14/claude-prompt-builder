@@ -446,10 +446,25 @@ async function main() {
     process.exit(0);
   }
 
-  // --save
-  if (flags.save) {
-    fs.writeFileSync(flags.save, result.prompt, 'utf-8');
-    console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(flags.save)}`);
+  // --save / --save-draft (B2): --save refuses a DRAFT prompt (unfilled RESOLVE/placeholder
+  // markers remain); --save-draft writes anyway. Either way the target file is the flag's value.
+  const saveTarget = flags.save || flags.saveDraft;
+  if (saveTarget) {
+    const markers = result.validation.blockingMarkers || [];
+    const isDraft = (result.validation.readiness || 'draft') !== 'ready';
+    if (isDraft && !flags.saveDraft) {
+      console.error(`  ${chalk.red('✖ Refusing to save a DRAFT prompt')} — ${markers.length} unfilled marker(s) remain.`);
+      console.error(`  ${chalk.gray('Fill these (read the resolved targets), or pass --save-draft to write the draft anyway:')}`);
+      for (const m of markers.slice(0, 25)) {
+        console.error(`    ${chalk.yellow(m.section)} ${chalk.gray(`(line ${m.line})`)}: ${m.marker}`);
+      }
+      process.exit(1);
+    }
+    fs.writeFileSync(saveTarget, result.prompt, 'utf-8');
+    if (flags.saveDraft && isDraft) {
+      console.log(`  ${chalk.yellow('⚠ Saved DRAFT')} to ${chalk.cyan(saveTarget)} (${markers.length} unfilled markers) — fill before handoff.`);
+    }
+    console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(saveTarget)}`);
     console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Scaffold: ${result.validation.score}/100 | Solution: ${(result.validation.solutionReadiness || 'draft').toUpperCase()} | Plan: ${(result.validation.planReadiness || 'draft').toUpperCase()}`)}`);
     if ((result.validation.readiness || 'draft') !== 'ready') {
       console.log(`  ${chalk.yellow('→ DRAFT:')} ${chalk.gray('read the resolved targets, fill PROBLEM ANALYSIS (root cause + fix) and TASK PLAN (file:line tasks + acceptance), then the prompt is ready.')}`);

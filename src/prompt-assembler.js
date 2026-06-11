@@ -320,6 +320,19 @@ function generatePrompt(task, options = {}) {
   // project shape, capped and approval-required — never a bulk mega-setup.
   const installProfile = getInstallProfile(options.profile);
 
+  // CLARIFY-FIRST GATE (B1): only when grounding confidence is LOW and there are multiple plausible
+  // target surfaces. Low confidence = the task named no surface so grounding fell back to "largest
+  // files" (targetsBySize) or matched several source roots but no single file. High confidence →
+  // no gate, no ceremony.
+  const groundingAmbiguous = grounding.grounded && (
+    (grounding.targetsBySize && (grounding.targets || []).length >= 2) ||
+    ((grounding.roots || []).length >= 2 && !(grounding.targets || []).length)
+  );
+  const clarifyCandidates = groundingAmbiguous
+    ? ((grounding.targets && grounding.targets.length ? grounding.targets : grounding.roots) || []).slice(0, 3)
+    : [];
+  const needsClarify = clarifyCandidates.length >= 2;
+
   // Build prompt sections
   const promptSections = []
 
@@ -339,6 +352,31 @@ function generatePrompt(task, options = {}) {
       '',
     ],
   })
+
+  if (needsClarify) {
+    const opts = clarifyCandidates.map((c, i) => `    ${String.fromCharCode(65 + i)}) ${c}`);
+    promptSections.push({
+      name: 'CLARIFY-FIRST GATE',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        '  CLARIFY-FIRST GATE — BLOCKING; resolve before any other step',
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        'The request did not pinpoint a single target surface and the repo scan found several plausible',
+        'ones. Ask the user EXACTLY ONE question, then WAIT for the answer. Do not proceed, do not guess,',
+        'do not start grounding or editing until this is resolved.',
+        '',
+        'Question to ask:',
+        `  "${neutralizeUserText(task)}" — which surface should this target?`,
+        ...opts,
+        `    ${String.fromCharCode(65 + clarifyCandidates.length)}) something else — please name the file/route`,
+        '',
+        'After the user answers: set the line below, delete this question, then continue to the next gate.',
+        '  Resolved target: <RESOLVE — the file:line the user chose>',
+        '',
+      ],
+    })
+  }
 
   promptSections.push({
     name: 'WORKFLOW PATTERN',
@@ -585,6 +623,9 @@ function generatePrompt(task, options = {}) {
         'You can execute this request more effectively with the skills below. Each is NOT installed.',
         'Installing is a suggestion only — run the install command ONLY after the user approves.',
         '',
+        'GATE ORDER: (1) resolve the CLARIFY-FIRST GATE if present, (2) settle these install decisions,',
+        '(3) THEN run grounding + diagnosis with the approved/installed skills, (4) then the solution + task plan.',
+        '',
         ...skillSuggestions.flatMap(s => [
           `  • Skill: ${s.name}            (source: ${s.source})`,
           `    Fits because: ${s.fits}`,
@@ -792,6 +833,10 @@ function generatePrompt(task, options = {}) {
       '  OUTPUT SCHEMA',
       '═══════════════════════════════════════════════════════════════',
       '',
+      isReadOnly
+        ? 'Lead the final answer with the FINDINGS LEDGER table (one row per finding: `[Sev] finding → evidence (file:line / cmd / screenshot) → recommendation`) BEFORE any narrative.'
+        : 'Lead the final answer with the SOLUTION TABLE — one row per edit: `file:line → current → change → why` — BEFORE any narrative or explanation. The table is the deliverable; prose comes after.',
+      '',
       'Output Format:',
       ...modeConfig.outputSchema.map(item => `  • ${item}`),
       '',
@@ -919,6 +964,7 @@ function generatePrompt(task, options = {}) {
       },
       installProfile: installProfile ? installProfile.label : null,
       discovery: discovery ? { status: discovery.status, reason: discovery.reason || null, fromCache: Boolean(discovery.fromCache), installed: discovery.installed.length, available: discovery.available.length } : null,
+      clarify: needsClarify ? { candidates: clarifyCandidates } : null,
       skillSuggestions,
       qualityRubric: {
         covered: qualityRubric.covered,

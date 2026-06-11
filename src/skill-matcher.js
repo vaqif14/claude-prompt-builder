@@ -717,11 +717,15 @@ function buildSkillSuggestions(annotatedPlan, discovery, dismissed = [], task = 
     if (!name || seen.has(key) || dismissedNorm.has(key) || installedNorm.has(key)) return;
     if (key === skillNorm('find-skills')) return; // meta-skill, not an install suggestion
     seen.add(key);
+    // Defense-in-depth: neutralize again at render time. discoverSkills already sanitizes registry
+    // text, but a library caller could pass an unsanitized discovery model — a skill name/description
+    // must never be able to forge a prompt section here.
+    const safeName = neutralizeUserText(String(name), 80);
     out.push({
-      name,
-      source,
-      fits,
-      install: `npx skills add ${name} -g`,
+      name: safeName,
+      source: neutralizeUserText(String(source), 120),
+      fits: neutralizeUserText(String(fits), 220),
+      install: `npx skills add ${safeName} -g`,
       rerun: `prompt-builder "${safeTask}"`,
       relevance: relevance || 0,
     });

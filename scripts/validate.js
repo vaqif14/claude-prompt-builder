@@ -162,6 +162,26 @@ function validatePrompt(promptText) {
   // are filled from real code.
   const readiness = (solutionReadiness === 'ready' && planReadiness === 'ready') ? 'ready' : 'draft';
 
+  // blockingMarkers (B2): every unfilled <RESOLVE …> slot or [stack]/[platform]/[skill] placeholder,
+  // with its 1-based line number and the section it sits in — so the CLI/agent can report precisely
+  // what is missing before the prompt may be saved/handed off.
+  const blockingMarkers = [];
+  {
+    const plines = p.split('\n');
+    let currentSection = 'PROMPT';
+    for (let i = 0; i < plines.length; i++) {
+      const ln = plines[i];
+      // Section header = a 2-space-indented title line wrapped in ═ rules.
+      if (/^═+\s*$/.test(plines[i - 1] || '') && /^ {2}[A-Z]/.test(ln)) {
+        currentSection = ln.trim().split(/\s+—\s+/)[0].trim();
+      }
+      if (/<RESOLVE/i.test(ln) || /\[(?:stack|platform|skill)\]/i.test(ln)) {
+        const marker = (ln.match(/<RESOLVE[^>]*>/i) || ln.match(/\[(?:stack|platform|skill)\]/i) || [ln.trim()])[0];
+        blockingMarkers.push({ section: currentSection, line: i + 1, marker: String(marker).slice(0, 100) });
+      }
+    }
+  }
+
   return {
     checks,
     passed: checks.filter(c => c.pass).length,
@@ -173,6 +193,7 @@ function validatePrompt(promptText) {
     solutionReadiness,
     planReadiness,
     readiness,
+    blockingMarkers,
   };
 }
 

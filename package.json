@@ -1,6 +1,6 @@
 {
   "name": "@vaqif14/prompt-builder",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Skill-discovery prompt builder for coding agents. Turns vague tasks into expert prompt text that searches local and ecosystem skills, recommends install/load steps, and tells the next agent which specialist skills to invoke and what evidence to collect. Optimized for Claude Code and its skills ecosystem.",
   "main": "src/index.js",
   "bin": {
@@ -11,7 +11,7 @@
     "manifest": "node scripts/generate-manifest.js",
     "search": "node scripts/search.js",
     "validate": "node scripts/validate.js",
-    "test": "node tests/platform-detector.test.js && node tests/mode-router.test.js && node tests/skill-matcher.test.js && node tests/sanitize.test.js && node tests/codebase-grounding.test.js && node tests/end-to-end.test.js && node tests/stack-cache.test.js && node tests/error-handler.test.js && node tests/token-budget.test.js && node tests/roadmap-data.test.js && node tests/workflow-router.test.js && node tests/context-diet.test.js && node tests/install-profiles.test.js && node tests/quality-rubric.test.js && node tests/skill-discovery.test.js && node tests/skill-suggestions.test.js"
+    "test": "node tests/platform-detector.test.js && node tests/mode-router.test.js && node tests/skill-matcher.test.js && node tests/sanitize.test.js && node tests/codebase-grounding.test.js && node tests/end-to-end.test.js && node tests/stack-cache.test.js && node tests/error-handler.test.js && node tests/token-budget.test.js && node tests/roadmap-data.test.js && node tests/workflow-router.test.js && node tests/context-diet.test.js && node tests/install-profiles.test.js && node tests/quality-rubric.test.js && node tests/skill-discovery.test.js && node tests/skill-suggestions.test.js && node tests/solution-flow.test.js"
   },
   "keywords": [
     "claude",
