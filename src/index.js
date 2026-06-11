@@ -22,6 +22,8 @@ const contextDiet = require('./context-diet');
 const installProfiles = require('./install-profiles');
 const qualityRubric = require('./quality-rubric');
 const skillDiscovery = require('./skill-discovery');
+const agentCards = require('./agent-cards');
+const skillTrust = require('./skill-trust');
 
 module.exports = {
   generatePrompt,
@@ -54,7 +56,7 @@ module.exports = {
   ensureStackProfile: stackCache.ensureStackProfile,
   getStackProfilePath: stackCache.getStackProfilePath,
   scanInstalledSkills: stackCache.scanInstalledSkills,
-  // v1.10.0 — agentic OS additions
+  // Agentic orchestration modules
   workflowRouter,
   selectWorkflowPattern: workflowRouter.selectWorkflowPattern,
   contextDiet,
@@ -67,4 +69,8 @@ module.exports = {
   buildQualityBar: qualityRubric.buildQualityBar,
   skillDiscovery,
   discoverSkills: skillDiscovery.discoverSkills,
+  agentCards,
+  loadAgentCards: agentCards.loadAgentCards,
+  skillTrust,
+  assessSkillTrust: skillTrust.assessSkillTrust,
 };

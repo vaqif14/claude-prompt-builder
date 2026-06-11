@@ -6,13 +6,13 @@ const crypto = require('crypto')
 const dataDir = path.join(__dirname, '..', 'data')
 const manifestPath = path.join(dataDir, 'manifest.json')
 
-function getCsvFiles(dir, files = []) {
+function getDataFiles(dir, files = []) {
   for (const entry of fs.readdirSync(dir)) {
     const fullPath = path.join(dir, entry)
     const stat = fs.statSync(fullPath)
     if (stat.isDirectory()) {
-      getCsvFiles(fullPath, files)
-    } else if (entry.endsWith('.csv')) {
+      getDataFiles(fullPath, files)
+    } else if (/\.(csv|json|md)$/.test(entry) && entry !== 'manifest.json') {
       files.push(fullPath)
     }
   }
@@ -24,13 +24,13 @@ function sha256(filePath) {
   return crypto.createHash('sha256').update(data).digest('hex')
 }
 
-const csvFiles = getCsvFiles(dataDir)
+const dataFiles = getDataFiles(dataDir)
 const manifest = {}
 
-for (const file of csvFiles) {
+for (const file of dataFiles) {
   const relativePath = path.relative(dataDir, file).replace(/\\/g, '/')
   manifest[relativePath] = sha256(file)
 }
 
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
-console.log(`Generated manifest with ${csvFiles.length} entries at ${manifestPath}`)
+console.log(`Generated manifest with ${dataFiles.length} entries at ${manifestPath}`)

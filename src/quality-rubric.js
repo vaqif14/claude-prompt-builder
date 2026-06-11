@@ -64,12 +64,10 @@ function buildQualityBar(isReadOnly) {
     '  QUALITY BAR — hit 9–10 on every dev-metrics dimension',
     '═══════════════════════════════════════════════════════════════',
     '',
-    'Engineered to score at the top of the session-quality rubric — hold that bar:',
-    '  • Prompt/Task clarity: every claim names a file:line; state expected-vs-actual, constraints, edge cases, and explicit non-goals.',
-    '  • Context: carry the artifacts, why-it-matters, related systems/dependencies, environment, and which tests prove it.',
-    '  • Verification (the weak spot): read every diff, re-run the full suite, check side-effects/regressions, validate each file ref, catch silent failures — treat output as suspect until proven, never "compiled, done".',
-    '  • Tool use (the weak spot): use the right feature per step — plan mode for design, parallel sub-agents for independent work, slash commands for review, CLAUDE.md/memory for durable facts.',
-    ...(isReadOnly ? ['  • A review answers clarifications comprehensively in one pass; do not bounce questions back piecemeal.'] : ['  • Answer any clarifying question comprehensively in one reply — anticipate the follow-up.']),
+    '  • Clarity/context: cite file:line; state expected-vs-actual, constraints, edge cases, non-goals, why it matters, dependencies, environment, and tests to verify.',
+    '  • Verification (the weak spot): read every diff; re-run relevant suites; check regressions, file refs, and silent failures.',
+    '  • Tool use (the weak spot): use plan mode and parallel sub-agents only when warranted; preserve durable facts in CLAUDE.md/memory.',
+    ...(isReadOnly ? ['  • Answer review clarifications comprehensively in one pass.'] : ['  • Answer clarifications comprehensively and anticipate the follow-up.']),
     '',
   ];
 }

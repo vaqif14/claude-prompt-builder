@@ -1,0 +1,16 @@
+id,category,severity,matcher_kind,needle,label
+instruction-override,injection,high,fixed,ignore previous instructions,Host instruction override
+instruction-disregard,injection,high,fixed,disregard instructions,Host instruction override
+system-prompt-leak,injection,medium,fixed,system prompt,System prompt access
+curl-env,exfiltration,high,sequence,curl&&process.env,Environment data sent with curl
+curl-home,exfiltration,high,sequence,curl&&$HOME,Home data sent with curl
+curl-data,exfiltration,high,sequence,curl&&--data,Local data posted with curl
+wget-post,exfiltration,high,sequence,wget&&--post-file,Local file posted with wget
+sudo-use,privilege,medium,fixed,sudo ,Privilege escalation
+agent-config-write,privilege,medium,fixed,.claude/settings,Agent configuration modification
+agent-hook-write,persistence,medium,fixed,.claude/hooks,Agent hook modification
+base64-eval,obfuscation,high,sequence,base64&&eval,Decoded payload execution
+base64-shell,obfuscation,high,sequence,base64 -d&&| sh,Decoded shell payload
+remote-shell,supply-chain,high,sequence,curl&&| bash,Remote script execution
+auto-session,trigger,medium,sequence,always run&&session start,Unconditional session trigger
+chmod-world,privilege,medium,fixed,chmod 777,World-writable permission change

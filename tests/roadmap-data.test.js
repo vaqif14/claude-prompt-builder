@@ -8,7 +8,7 @@ const agenticCsv = fs.readFileSync(path.join(root, 'data/patterns/agentic-next.c
 const pkg = require('../package.json');
 
 for (const expected of [
-  'Prompt Builder 1.6.0 Roadmap',
+  'Prompt Builder Roadmap',
   'Verification-First Contract',
   'Context Diet Score',
   'Tool/MCP Readiness Audit',

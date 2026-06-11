@@ -11,12 +11,11 @@ Turn vague user requests into precise, paste-ready orchestration prompts. A prof
 
 Prompt Builder does not *implement* the change (it does not edit files or ship the fix). But it MUST do the understanding: read the target code, diagnose the actual problem, and write the concrete solution direction into the prompt ("the root cause is X at `file:line`; the fix is to change A→B / extract Y / split Z"). It is a *diagnosis-and-prescription* tool, not just a routing manifest — a prompt that only says "go find the problem and figure out the fix" has failed. It then also prepares the orchestration around that solution: which skills to discover/install/call, in what order, with what evidence. For review requests, require evidence first and never let the prompt claim success upfront.
 
-## How It Works: Understand → Clarify → Discover → Diagnose → Conclude
+## How It Works: Understand → Clarify → Conclude
 
 This is the heart of the skill. The user speaks in **plain, natural language** — in any
 language, however casual or vague (`"yoxla bu səhifəni"`, `"bunu düzəlt"`, `"add a timer"`).
-The skill does the work of understanding it **against the real codebase**, not just the words.
-Each gate has a pass condition; a gate with no work to do is omitted (no ceremony):
+The skill does the work of understanding it **against the real codebase**, not just the words:
 
 1. **Understand the request in plain language.** Accept casual, mixed-language, or
    underspecified input. Never demand precise phrasing from the user.
@@ -25,26 +24,19 @@ Each gate has a pass condition; a gate with no work to do is omitted (no ceremon
    and the surrounding code. Map the vague intent to concrete `file:line` targets. The CLI
    heuristics (mode, platform, stack, skills) are a starting point — the codebase is the
    source of truth.
-3. **Clarify only when genuinely blocked (CLARIFY-FIRST GATE).** This gate is emitted **only when
-   grounding confidence is low** — the task named no surface and several plausible ones exist. It
-   poses **exactly one** A/B/C question naming the real candidate paths; the agent asks it and
-   **waits**, then records `Resolved target:` and deletes the question. High confidence → the gate
-   is omitted entirely.
-4. **Discover skills (SKILL SUGGESTIONS gate).** Check what is installed vs. what the ecosystem
-   offers (`npx skills find`, best-effort/offline-degrading). Every matched skill is labeled
-   ✓ installed / ⤓ suggested / ? unverified; not-installed best-fits become an install suggestion +
-   rerun (never "load first"). Settle install decisions **before** the diagnosis pass uses them.
-5. **Diagnose and write the solution.** This is the step that separates a useful prompt from
+3. **Clarify only when genuinely blocked.** If — *after reading the code* — the target,
+   scope, or intended outcome is still ambiguous in a way that changes what gets built, ask
+   the user **one focused question and wait**. Do not guess on decisions the user owns. If
+   the code already makes the intent clear, proceed without asking.
+4. **Diagnose and write the solution.** This is the step that separates a useful prompt from
    orchestration ceremony. Open the resolved target file(s) and actually read them. Then fill
    the `PROBLEM ANALYSIS & SOLUTION DIRECTION` section with a concrete, code-grounded diagnosis:
    the root cause at a real `path:line`, why it matters *in this code*, and the specific fix to
    apply ("extract `X` from `file:line`", "split this 700-line god-class into A/B/C", "fix the
    N+1 at `line` with a JOIN FETCH", "change `A` → `B`"). The prompt must carry the *solution
    direction*, not just a map and a "go figure it out".
-6. **Conclude with the prompt.** Once targets are resolved and the diagnosis is written, emit
-   the orchestration prompt (sections below) — never a generic, placeholder prompt. The CLI refuses
-   to `--save` a prompt that still has unfilled `<RESOLVE>` markers (`validation.blockingMarkers`
-   names each with its section + line); use `--save-draft` to override.
+5. **Conclude with the prompt.** Once targets are resolved and the diagnosis is written, emit
+   the orchestration prompt (sections below) — never a generic, placeholder prompt.
 
 **Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact (its own summary prints
 `Solution: DRAFT` and `Plan: DRAFT` until you fill them). Do NOT hand the prompt back while it is a draft:
@@ -89,16 +81,23 @@ node bin/prompt-builder.js --no-stack-cache "one-off prompt"
 # Output formats
 node bin/prompt-builder.js --compact "add timer"           # minimal
 node bin/prompt-builder.js --json "fix bug"                 # JSON
-node bin/prompt-builder.js --save prompt.txt "refactor api" # save to file
+node bin/prompt-builder.js --save prompt.txt "refactor api" # save only when readiness is READY
+node bin/prompt-builder.js --save-draft prompt.txt "refactor api" # explicitly save scaffold
 node bin/prompt-builder.js --print-skills-only "design card" # skills only
 
 # Model / sessions / token budget
 node bin/prompt-builder.js --model opus "refactor api"      # force model for all agents (haiku|sonnet|opus)
 node bin/prompt-builder.js --session-id <id> "continue"     # resume a prior session
 node bin/prompt-builder.js --list-sessions                  # show recent sessions
+node bin/prompt-builder.js --record-outcome <id> success "verified"
+node bin/prompt-builder.js --stats                          # local JSONL session statistics
+node bin/prompt-builder.js --feedback-report                # local correlation signals; never auto-edits
 node bin/prompt-builder.js --max-tokens 8000 "big task"     # token budget (default 6000)
 node bin/prompt-builder.js --full "big task"                # disable token compression (emit every section)
 node bin/prompt-builder.js --context-report "task"          # print per-section token usage
+
+# Skill trust pre-screen
+node bin/prompt-builder.js --trust-details <skill-name>
 
 # Lists
 node bin/prompt-builder.js --list-modes
@@ -134,30 +133,28 @@ Ask at most one clarifying question, and only after reading the codebase fails t
 
 ## Professional Prompt Shape
 
-The CLI emits these sections in this order (this is the real v1.9.0 output, not an idealized list).
+The CLI emits these sections in this order (this is the real v2.0.0 output, not an idealized list).
 The five **bolded** sections are the differentiator — a generic prompt builder has none of them.
 The CLI emits them with `<RESOLVE>` slots; the SKILL fills the two marked ⬅ from code it actually reads.
 
 1. **System Contract**: senior role, exact mission, authority level
 2. **Workflow Pattern**: the composable agent shape to run (single-pass / prompt-chain / routing / parallel-review / orchestrator-workers / evaluator-optimizer / autonomous-loop) with a one-line shape + rationale — simple/composable before autonomous
-3. **Grounded Targets**: auto-detected from the repo — detected stack, real build/test commands, ranked target files, project invariants (only when run with the target repo as cwd; see grounding note below)
-4. **Grounding Contract**: surface-aware slots (entry point, data layer, contracts, schema…) to resolve to real `file:line` before executing
-5. **Problem Analysis & Solution Direction** ⬅ *the diagnostic center* — root cause at `path:line`, why it matters in THIS code, the specific fix. SKILL fills this; an unfilled one = `solutionReadiness: draft`
-6. **Write Safety Gate** (write modes only): plan-approval gate + invariant fence; takes precedence over the plan
-7. **Context Window**: stack profile, detected platform profile, target-surface hints, user profile
-8. **Skill Discovery Preflight**: stack-profile-cache-first local scan + ecosystem search + install/load recommendation format
-9. **Selective Install Profile** (only with `--profile`): a small, capped (≤6), approval-required curated skill set for the project shape
-10. **Matched Skills** + **Required Skills To Invoke**: exact skill names, reasons, execution order
-11. **Multi-Agent Task Board**: task cards `id | owner | skill | title | status | depends_on | artifact` + skill-binding rule
-12. **Agent Review Council** (+ **Designer Rubric** for visual surfaces): role-based passes
-13. **Model Assignments**: complexity → model per agent
-14. **Task Plan** ⬅ spec-kit-style rows (`T###` edit tasks with `file:line` + acceptance + `depends_on`; read-only modes emit an `F###` findings ledger with evidence). SKILL fills this; an unfilled one = `planReadiness: draft`
-15. **Tool Directives**: read/write/execute/browser permissions and forbidden actions
-16. **Constraints** (+ scope fences and stop-and-ask triggers)
-17. **Stack Best Practices / Anti-Patterns / Verification Gates** (+ **Stop Conditions**)
-18. **Verification Contract**: every claim split by the proof that backs it — provable-by-source / -command / -browser-device / blocked-by — so "Blocked" is first-class and nothing is claimed without proof
-19. **Acceptance Criteria** + **Evidence Gates**: every claim backed by `file:line`, screenshot, command output, or log
-20. **Output Schema**: exact report shape expected from the coding agent
+3. **Quality Bar**: compact six-axis dev-metrics contract; always retained by token budgeting
+4. **Grounded Targets**: detected stack, real build/test commands, ranked target files, project invariants
+5. **Exploration Contract**: bounded search strategy, source-of-truth rules, and uncertainty handling
+6. **Grounding Contract**: surface-aware slots to resolve to real `file:line` before executing
+7. **Clarify-First Gate** (only when target confidence is low): real A/B repository paths; stop and wait
+8. **Problem Analysis & Solution Direction** ⬅ *the diagnostic center*
+9. **Write Safety Gate** (write modes only): Planning/Execution state, approval gate, invariant fence
+10. **Context Window**: stack/platform/situational context and user profile
+11. **Skill Discovery Preflight**: cache-first local scan, trusted ecosystem search, install/load format
+12. **Skill Review Rubric / Selective Install Profile** when the mode or option requires them
+13. **Matched Skills**: installed/suggested/unverified state, demand-driven invocation order
+14. **Multi-Agent Task Board** and **Agent Review Council**: data-driven roles with scope and evidence
+15. **Task Plan** ⬅ file map plus atomic edit rows, or a findings ledger for read-only work
+16. **Tool Directives**, **Constraints**, and stack-specific practices
+17. **Verification Contract**: source/command/browser-device/blocked-by evidence table
+18. **Acceptance Criteria** and **Output Schema**
 
 **Context diet.** Every run scores the prompt for context pressure (`lean`/`ok`/`heavy`), flags
 oversized sections and missing stack-profile caching, and recommends a `--max-tokens`. Surfaced in
@@ -188,6 +185,28 @@ The generated prompt must include these rules:
 - Do not rely only on the hardcoded skill list. First search local installed skills and, when available, the open skill ecosystem.
 - If a stronger skill exists, recommend the install/load command and exact rerun prompt after `/reload-skills`.
 - Report which finding came from which skill or review pass.
+
+## Skill Trust Boundary
+
+Skill trust screening is a static pre-screen, not a sandbox and not a security guarantee. It never
+executes skill code. Local scans are bounded by file count and byte limits, skip binaries and common
+build/vendor directories, flag symlinks that escape the skill root, and match deterministic patterns
+from `data/skill-trust-patterns.csv`. High-risk candidates are excluded from install suggestions.
+Use `--trust-details <skill>` to inspect the neutralized findings before approving installation.
+
+## Session Feedback
+
+Sessions are stored as append-only JSONL event streams under `~/.prompt-builder/sessions/`, with an
+atomic `index.json`. Legacy `sessions.json` data is migrated once and preserved. Record outcomes with
+`--record-outcome`; `--stats` summarizes local usage, while `--feedback-report` reports regeneration
+and failure correlations only after the configured sample threshold. Correlation never changes a
+template automatically.
+
+## Draft Export Rule
+
+Generated CLI scaffolds contain `<RESOLVE>` markers until a code-reading agent fills the diagnosis
+and task plan. `--save` refuses such drafts and prints each blocking marker with its line and section.
+Use `--save-draft` only when an unresolved scaffold is intentionally the desired artifact.
 
 ## Skill Discovery Preflight
 

@@ -1,0 +1,3 @@
+kind,text
+write,"SOLUTION TABLE — one row per edit: `file:line → current → change → why`"
+read-only,"FINDINGS LEDGER table — severity | file:line | evidence | impact | recommendation"

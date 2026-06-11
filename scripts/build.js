@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
+const { loadCsv: loadCsvData } = require('../src/data-loader');
 
 function loadCsv(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n').filter(l => l.trim());
-  const headers = lines[0].split(',').map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const parts = line.split(',');
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = (parts[i] || '').trim());
-    return obj;
-  });
+  return loadCsvData(filePath, { header: true });
 }
 
 function buildSkill(dataDir = path.join(__dirname, '..', 'data')) {

@@ -15,20 +15,16 @@ const { selectWorkflowPattern } = require('./workflow-router');
 const { scoreContextDiet } = require('./context-diet');
 const { getInstallProfile } = require('./install-profiles');
 const { buildQualityBar, assessPromptQuality } = require('./quality-rubric');
+const { loadCsv, loadMarkdown, renderTemplate } = require('./data-loader');
 
 function parseRows(file) {
   if (!fs.existsSync(file)) return [];
-  const lines = fs.readFileSync(file, 'utf-8')
-    .split('\n')
-    .filter(line => line.trim());
-
-  // Smart header detection: skip if first line looks like a header
-  if (lines.length > 0 && /^(section|group|domain|category|key),/i.test(lines[0])) {
-    lines.shift();
+  const records = loadCsv(file, { header: false });
+  if (records.length && /^(section|group|domain|category|key)$/i.test(records[0].values[0] || '')) {
+    records.shift();
   }
-
-  return lines.map((line) => {
-    const parts = line.split(',');
+  return records.map((record) => {
+    const parts = record.values;
     const group = sanitizeCsvValue((parts[0] || '').trim(), file);
     const key = sanitizeCsvValue((parts[1] || '').trim(), file);
     const explicitValue = sanitizeCsvValue(parts.slice(2).join(',').trim(), file);
@@ -58,6 +54,15 @@ function inferTaskUnderstanding(task, mode, platforms = []) {
     `Quality bar: ${expected}.`,
     'Important: the prompt-builder does not perform the work itself; it produces an orchestration prompt that tells the next agent which skills to invoke and what evidence to collect.',
   ];
+}
+
+function clarifyDecision(task, grounding) {
+  const targets = (grounding && grounding.targets || [])
+    .map(target => String(target).replace(/\s+\((?:redirect|barrel|large\/complex).*$/, ''));
+  if (!grounding || !grounding.targetsBySize || targets.length < 2) return null;
+  const vagueReference = /\b(?:this|that|it|these|those|bunu|bura|burani|buranı|onu)\b/i.test(task);
+  if (!vagueReference) return null;
+  return { options: targets.slice(0, 2) };
 }
 
 // Platform-aware grounding slots: a backend/service or data task must not be handed
@@ -140,11 +145,14 @@ function buildTaskPlan(mode, isReadOnly, specMicroBlock) {
     );
   }
   out.push(
+    'FILE MAP — list every created/modified file before task rows',
+    '  • <RESOLVE — path/to/file>: <RESOLVE — one-line responsibility> | action: <create|modify>',
+    '',
     'Phase skeleton is from the mode; YOU (having read the code) fill the description, file:line,',
-    'dependencies, and per-task acceptance. A row that still has a RESOLVE marker, or names no',
+    'verification, conventions, dependencies, and per-task acceptance. A row that still has a RESOLVE marker, or names no',
     'concrete file, is unfinished. Mark [P] only when tasks touch different files with no shared dep.',
     '',
-    'Legend: [ID] [P?] <description> → <file:line> | depends_on: <ids|none> | acceptance: <Given/When/Then or named test>',
+    'Legend: [ID] [P?] <one action> → <one primary file:line> | verify: <fresh command/test> | docs: <convention|n/a> | depends_on: <ids|none> | acceptance: <observable evidence>',
     '',
   );
   const phases = TASK_PLAN_PHASES[mode] || DEFAULT_TASK_PHASES;
@@ -152,10 +160,10 @@ function buildTaskPlan(mode, isReadOnly, specMicroBlock) {
   phases.forEach((phase, idx) => {
     const pid = String(id).padStart(3, '0'); id++;
     out.push(`Phase ${idx + 1} — ${phase}`);
-    out.push(`  [ ] T${pid} [P] <RESOLVE — task> → <RESOLVE — file:line> | depends_on: none | acceptance: <RESOLVE — Given/When/Then or named test>`);
+    out.push(`  [ ] T${pid} [P] <RESOLVE — one 2–5 minute action> → <RESOLVE — one file:line> | verify: <RESOLVE — command/test> | docs: <RESOLVE — convention or n/a> | depends_on: none | acceptance: <RESOLVE — observable evidence>`);
     if (idx === 0) {
       const pid2 = String(id).padStart(3, '0'); id++;
-      out.push(`  [ ] T${pid2}    <RESOLVE — task> → <RESOLVE — file:line> | depends_on: T${pid} | acceptance: <RESOLVE>`);
+      out.push(`  [ ] T${pid2}    <RESOLVE — one action> → <RESOLVE — one file:line> | verify: <RESOLVE> | docs: <RESOLVE> | depends_on: T${pid} | acceptance: <RESOLVE>`);
     }
     out.push(`  ── Checkpoint: <RESOLVE — what is observably true/green after this phase>`);
   });
@@ -234,9 +242,11 @@ function generatePrompt(task, options = {}) {
     complexity = 'Medium';
   }
 
-  const dataDir = path.join(__dirname, '..', 'data');
+  const dataDir = options.dataDir || path.join(__dirname, '..', 'data');
 
-  verifyDataIntegrity(dataDir);
+  if (!options.dataDir || options.verifyDataIntegrity) verifyDataIntegrity(dataDir);
+  const contract = name => loadMarkdown(path.join(dataDir, 'contracts', name)).trim();
+  const contractRows = name => loadCsv(path.join(dataDir, 'contracts', name), { header: true, allowTemplates: true });
 
   // Load template CSV for supplemental data
   const templateFile = path.join(dataDir, 'templates', `${template}.csv`);
@@ -287,7 +297,14 @@ function generatePrompt(task, options = {}) {
   // in which case static matches are honestly labeled "unverified").
   const discovery = options.discovery || null;
   const annotatedPlan = classifySkills(skillPlan, discovery);
-  const skillSuggestions = buildSkillSuggestions(annotatedPlan, discovery, options.dismissedSkills || [], task);
+  const skillSuggestions = buildSkillSuggestions(
+    annotatedPlan,
+    discovery,
+    options.dismissedSkills || [],
+    task,
+    { dataDir }
+  );
+  const excludedSkillSuggestions = skillSuggestions.excluded || [];
   const stackProfile = options.stackProfile
     ? ensureStackProfile({
         cwd: options.cwd || process.cwd(),
@@ -310,28 +327,21 @@ function generatePrompt(task, options = {}) {
   const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms, surface);
 
   const isReadOnly = ['audit', 'design-review', 'architecture-review', 'security-review', 'performance-review', 'release-check', 'agent-readiness', 'tooling-review', 'skill-review'].includes(mode);
+  const clarify = clarifyDecision(task, grounding);
 
   // Workflow pattern (Anthropic "Building Effective Agents"): tell the next agent which
   // composable workflow shape to run, not only which skills to load. Computed from the
   // resolved mode, complexity, surface count, and council size.
   const workflow = selectWorkflowPattern({ mode, complexity, platforms, agentCount: agentCouncil.length, task });
+  const startingMode = isReadOnly ? 'REVIEW'
+    : (workflow.pattern === 'orchestrator-workers' || complexity === 'High' ||
+      (grounding.targets || []).length > 1 || (grounding.invariants || []).length > 0)
+      ? 'PLANNING'
+      : 'EXECUTION';
 
   // Selective install profile (opt-in via --profile): a small curated skill set for the
   // project shape, capped and approval-required — never a bulk mega-setup.
   const installProfile = getInstallProfile(options.profile);
-
-  // CLARIFY-FIRST GATE (B1): only when grounding confidence is LOW and there are multiple plausible
-  // target surfaces. Low confidence = the task named no surface so grounding fell back to "largest
-  // files" (targetsBySize) or matched several source roots but no single file. High confidence →
-  // no gate, no ceremony.
-  const groundingAmbiguous = grounding.grounded && (
-    (grounding.targetsBySize && (grounding.targets || []).length >= 2) ||
-    ((grounding.roots || []).length >= 2 && !(grounding.targets || []).length)
-  );
-  const clarifyCandidates = groundingAmbiguous
-    ? ((grounding.targets && grounding.targets.length ? grounding.targets : grounding.roots) || []).slice(0, 3)
-    : [];
-  const needsClarify = clarifyCandidates.length >= 2;
 
   // Build prompt sections
   const promptSections = []
@@ -353,42 +363,19 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
-  if (needsClarify) {
-    const opts = clarifyCandidates.map((c, i) => `    ${String.fromCharCode(65 + i)}) ${c}`);
-    promptSections.push({
-      name: 'CLARIFY-FIRST GATE',
-      lines: [
-        '═══════════════════════════════════════════════════════════════',
-        '  CLARIFY-FIRST GATE — BLOCKING; resolve before any other step',
-        '═══════════════════════════════════════════════════════════════',
-        '',
-        'The request did not pinpoint a single target surface and the repo scan found several plausible',
-        'ones. Ask the user EXACTLY ONE question, then WAIT for the answer. Do not proceed, do not guess,',
-        'do not start grounding or editing until this is resolved.',
-        '',
-        'Question to ask:',
-        `  "${neutralizeUserText(task)}" — which surface should this target?`,
-        ...opts,
-        `    ${String.fromCharCode(65 + clarifyCandidates.length)}) something else — please name the file/route`,
-        '',
-        'After the user answers: set the line below, delete this question, then continue to the next gate.',
-        '  Resolved target: <RESOLVE — the file:line the user chose>',
-        '',
-      ],
-    })
-  }
-
   promptSections.push({
     name: 'WORKFLOW PATTERN',
     lines: [
       '═══════════════════════════════════════════════════════════════',
-      '  WORKFLOW PATTERN — the agent shape to run (simple/composable before autonomous)',
+      '  WORKFLOW PATTERN — simple/composable before autonomous',
       '═══════════════════════════════════════════════════════════════',
       '',
       `Pattern: ${workflow.pattern}`,
       `Shape: ${workflow.description}`,
       `Why: ${workflow.rationale}`,
-      'Rule: prefer this composable shape; escalate to a more autonomous loop only if it provably fails.',
+      ...(workflow.pattern === 'orchestrator-workers' || workflow.pattern === 'parallel-review'
+        ? ['', 'Subagent Dispatch Protocol:', ...contract('subagent-protocol.md').split('\n').map(line => `  • ${line}`)]
+        : []),
       '',
     ],
   })
@@ -433,6 +420,18 @@ function generatePrompt(task, options = {}) {
   }
 
   promptSections.push({
+    name: 'EXPLORATION CONTRACT',
+    lines: [
+      '═══════════════════════════════════════════════════════════════',
+      '  EXPLORATION CONTRACT',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      ...contract('exploration.md').split('\n').map(line => `  • ${line}`),
+      '',
+    ],
+  })
+
+  promptSections.push({
     name: 'GROUNDING CONTRACT',
     lines: [
       '═══════════════════════════════════════════════════════════════',
@@ -445,10 +444,28 @@ function generatePrompt(task, options = {}) {
            'Before doing the work, read the actual codebase and resolve these to real file:line targets:']),
       ...buildGroundingSlots(surface),
       '',
+      'Resolve missing slots through the Exploration Contract above, never by guessing.',
       'Do not begin work, and do not present a verdict, until these are resolved to concrete paths.',
       '',
     ],
   })
+
+  if (clarify) {
+    promptSections.push({
+      name: 'CLARIFY-FIRST GATE',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        '  CLARIFY-FIRST GATE',
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        ...renderTemplate(contract('clarify-first.md'), {
+          OPTION_A: clarify.options[0],
+          OPTION_B: clarify.options[1],
+        }).split('\n'),
+        '',
+      ],
+    })
+  }
 
   // The diagnostic center. Orchestration scaffold is worthless without it: the agent that
   // produces this prompt MUST open the resolved targets, diagnose the real problem, and
@@ -483,6 +500,8 @@ function generatePrompt(task, options = {}) {
   })
 
   if (!isReadOnly) {
+    const operatingMode = renderTemplate(contract('operating-modes.md'), { START_MODE: startingMode });
+    const safetyRows = contractRows('write-safety.csv');
     promptSections.push({
       name: 'WRITE SAFETY GATE',
       lines: [
@@ -490,10 +509,10 @@ function generatePrompt(task, options = {}) {
         '  WRITE SAFETY GATE — TAKES PRECEDENCE OVER THE EXECUTION PLAN',
         '═══════════════════════════════════════════════════════════════',
         '',
+        ...operatingMode.split('\n'),
+        '',
         'These gates override the Execution Plan below. Do not start editing until they are satisfied.',
-        '  • Plan-Approval Gate: if the change spans multiple files or touches shared/critical code, present the change/deviation list and WAIT for explicit user approval before editing. Do not plan and fix in the same pass unless the user already approved fixes.',
-        '  • Invariant Fence: before changing code, discover and characterize (with tests) the load-bearing invariants of the touched paths — concurrency/locking, idempotency, money/amount math, scheduling/time, auth/authorization, append-only/audit data, and already-applied DB migrations. Do NOT weaken any of them; escalate before changing locking, transaction semantics, or an applied migration.',
-        '  • Behavior-preserving means same observable outputs/contracts. Performance fixes (e.g. resolving N+1) that keep outputs identical are allowed and expected — capture a before/after measurement; never fabricate metrics.',
+        ...safetyRows.map(row => `  • ${row.text}`),
         '',
       ],
     })
@@ -555,6 +574,24 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  if (mode === 'skill-review') {
+    const rubric = loadCsv(path.join(dataDir, 'skill-review-rubric.csv'), {
+      header: true,
+      requiredColumns: ['axis', 'check', 'zero_if'],
+    });
+    promptSections.push({
+      name: 'SKILL REVIEW RUBRIC',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        '  SKILL REVIEW RUBRIC',
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        ...rubric.map(row => `  • ${row.axis}: ${row.check} Zero score when: ${row.zero_if}.`),
+        '',
+      ],
+    })
+  }
+
   if (installProfile) {
     promptSections.push({
       name: 'SELECTIVE INSTALL PROFILE',
@@ -605,9 +642,7 @@ function generatePrompt(task, options = {}) {
         `       ${item.reason}. ${item.instruction}`,
       ].join('\n')),
       '',
-      'Rule: a not-installed skill is NEVER "load first" — if the best-fit skill is not installed, the first step is the install suggestion + rerun (see SKILL SUGGESTIONS), not a load.',
-      'Rule: Do not continue until each relevant skill above has been invoked, marked unavailable with a reason, or marked N/A (not applicable to this task\'s scope) — invoke only what the task actually needs.',
-      'Rule: Do not claim a skill was used unless its guidance was actually loaded/read or its workflow was followed.',
+      ...contract('gate-order.md').split('\n'),
       '',
     ],
   })
@@ -623,16 +658,19 @@ function generatePrompt(task, options = {}) {
         'You can execute this request more effectively with the skills below. Each is NOT installed.',
         'Installing is a suggestion only — run the install command ONLY after the user approves.',
         '',
-        'GATE ORDER: (1) resolve the CLARIFY-FIRST GATE if present, (2) settle these install decisions,',
-        '(3) THEN run grounding + diagnosis with the approved/installed skills, (4) then the solution + task plan.',
-        '',
         ...skillSuggestions.flatMap(s => [
           `  • Skill: ${s.name}            (source: ${s.source})`,
           `    Fits because: ${s.fits}`,
+          `    ${s.trustNote}`,
           `    Install: ${s.install}        ← run only after user approves`,
           `    Then: /reload-skills and rerun: ${s.rerun}`,
           '',
         ]),
+        ...(excludedSkillSuggestions.length ? [
+          'Excluded by trust screen:',
+          ...excludedSkillSuggestions.map(s => `  • ${s.name} — ${s.risk} risk: ${s.patterns.join(', ')}`),
+          '',
+        ] : []),
       ],
     })
   }
@@ -664,7 +702,12 @@ function generatePrompt(task, options = {}) {
       '═══════════════════════════════════════════════════════════════',
       '',
       'Run these review passes. If subagents are available, spawn them. If not, perform them sequentially and keep findings separated:',
-      ...agentCouncil.map((agent, index) => `  ${index + 1}. ${agent.name} — ${agent.mission} Output: ${agent.output}`),
+      ...agentCouncil.flatMap((agent, index) => [
+        `  ${index + 1}. Role: ${agent.role}`,
+        `     Scope: ${agent.scope}`,
+        `     Out of scope: ${agent.outOfScope}`,
+        `     Evidence: ${agent.requiredEvidence} | Skill: ${agent.primarySkill}`,
+      ]),
       '',
     ],
   })
@@ -777,32 +820,32 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
-  // Verification-First Contract (Anthropic Claude Code guidance): if the agent cannot prove
-  // it, it must not claim it. Split every claim by what KIND of proof backs it, and name the
-  // blockers up front so "Blocked" is a first-class outcome, not a silent assumption.
+  const commandFor = key => {
+    const cmd = grounding.build && grounding.build[key];
+    if (!cmd) return `${key} command not detected; resolve before claim`;
+    return grounding.build.dir ? `(cd ${grounding.build.dir} && ${cmd})` : cmd;
+  };
+  const evidenceRows = contractRows('evidence-claims.csv').map(row => ({
+    ...row,
+    required: renderTemplate(row.required, {
+      TEST_COMMAND: `\`${commandFor('test')}\``,
+      BUILD_COMMAND: `\`${commandFor('build')}\``,
+    }),
+  }));
   promptSections.push({
     name: 'VERIFICATION CONTRACT',
     lines: [
       '═══════════════════════════════════════════════════════════════',
-      '  VERIFICATION CONTRACT — what may be claimed, and on what proof',
+      `  VERIFICATION CONTRACT — ${isReadOnly ? 'findings evidence' : 'Iron Law'}`,
       '═══════════════════════════════════════════════════════════════',
       '',
-      'Classify every claim by the proof that backs it. A claim with no matching proof is not made.',
-      '  • Provable by source: read the resolved file:line — structure, types, contracts, control flow.',
-      `  • Provable by command: ${surface.isService || !surface.isUi ? 'typecheck / lint / test / build output and logs / traces / query output' : 'typecheck / lint / test / build output'} — paste pass/fail, never assume green.`,
-      ...(surface.isUi ? ['  • Provable by browser/device: screenshots + console + network on the resolved route, at the real breakpoints, when a dev server/emulator is up.'] : []),
-      `  • Blocked-by: name the exact missing prerequisite — ${surface.isUi ? 'dev server, ' : ''}auth/credentials, running services, database, seed data, sandbox/network, or missing tooling.`,
+      ...(isReadOnly ? contract('verification-read-only.md') : contract('verification-write.md')).split('\n'),
       '',
-      'Verification rigor (treat every output as suspect until proven — this is the rubric\'s weak spot):',
-      '  • Read every diff line-by-line; do not approve unread changes.',
-      '  • Re-run the full suite (not just the touched test); confirm green, not merely "compiled".',
-      '  • Check for side-effects / regressions in related flows the change could have disturbed.',
-      '  • Validate every file:line reference the work claims — open it, confirm it says what was claimed.',
-      '  • Hunt silent failures: swallowed errors, empty catches, fallbacks that mask the real result.',
+      '| Claim | Required evidence | Not sufficient |',
+      '|---|---|---|',
+      ...evidenceRows.map(row => `| ${row.claim} | ${row.required} | ${row.not_sufficient} |`),
       '',
-      isReadOnly
-        ? 'Verdict rule: do NOT output "Working"/"Secure"/"Fast"/"Ready" unless the matching proof above is attached. Missing proof → "Blocked" (with the blocker) or "Working with issues" — never an optimistic guess.'
-        : 'Done rule: do NOT report the change "done"/"fixed"/"working" unless a regression test or command output proves the changed path — compiling is not proof. No proof → say so and report "Blocked" with the blocker.',
+      `Blocked-by: name the exact missing prerequisite — ${surface.isUi ? 'dev server, ' : ''}auth/credentials, running services, database, seed data, sandbox/network, or missing tooling.`,
       '',
     ],
   })
@@ -833,11 +876,8 @@ function generatePrompt(task, options = {}) {
       '  OUTPUT SCHEMA',
       '═══════════════════════════════════════════════════════════════',
       '',
-      isReadOnly
-        ? 'Lead the final answer with the FINDINGS LEDGER table (one row per finding: `[Sev] finding → evidence (file:line / cmd / screenshot) → recommendation`) BEFORE any narrative.'
-        : 'Lead the final answer with the SOLUTION TABLE — one row per edit: `file:line → current → change → why` — BEFORE any narrative or explanation. The table is the deliverable; prose comes after.',
-      '',
       'Output Format:',
+      `  • ${contractRows('output-leads.csv').find(row => row.kind === (isReadOnly ? 'read-only' : 'write')).text}`,
       ...modeConfig.outputSchema.map(item => `  • ${item}`),
       '',
       '═══════════════════════════════════════════════════════════════',
@@ -864,6 +904,7 @@ function generatePrompt(task, options = {}) {
     'security-review': ['AGENT REVIEW COUNCIL'],
     'architecture-review': ['AGENT REVIEW COUNCIL'],
     'performance-review': ['AGENT REVIEW COUNCIL'],
+    'skill-review': ['SKILL REVIEW RUBRIC', 'AGENT REVIEW COUNCIL'],
   }
   const critical = new Set(MODE_CRITICAL[mode] || [])
   if (designerRubric.length) critical.add('DESIGNER RUBRIC')
@@ -910,6 +951,8 @@ function generatePrompt(task, options = {}) {
     setContextReport(report)
   }
 
+  const preReportText = finalSections.flatMap(s => s.lines).join('\n')
+  const qualityRubric = assessPromptQuality(preReportText)
   const lines = finalSections.flatMap(s => s.lines)
 
   if (options.contextReport) {
@@ -934,11 +977,6 @@ function generatePrompt(task, options = {}) {
   const promptText = lines.join('\n')
   const validation = validatePrompt(promptText)
 
-  // Self-assess the generated prompt against the dev-metrics session-quality rubric (the six
-  // dimensions the dashboard scores 1–10). Diagnostic, like context-diet: surfaces which
-  // dimensions still need filling so the SKILL can close the gap before handoff.
-  const qualityRubric = assessPromptQuality(promptText)
-
   return {
     prompt: promptText,
     validation,
@@ -951,7 +989,7 @@ function generatePrompt(task, options = {}) {
       contextSize: promptText.length < 2000 ? 'Small' : promptText.length < 5000 ? 'Medium' : 'Large',
       platforms: platforms.map(p => p.id),
       domains: analysis.domains.map(d => d.domain),
-      agents: analysis.agentCount,
+      agents: agentCouncil.length,
       readOnly: isReadOnly,
       workflowPattern: workflow.pattern,
       contextDiet: {
@@ -964,8 +1002,9 @@ function generatePrompt(task, options = {}) {
       },
       installProfile: installProfile ? installProfile.label : null,
       discovery: discovery ? { status: discovery.status, reason: discovery.reason || null, fromCache: Boolean(discovery.fromCache), installed: discovery.installed.length, available: discovery.available.length } : null,
-      clarify: needsClarify ? { candidates: clarifyCandidates } : null,
       skillSuggestions,
+      excludedSkillSuggestions,
+      clarify,
       qualityRubric: {
         covered: qualityRubric.covered,
         total: qualityRubric.total,

@@ -1,0 +1,5 @@
+id,claim,required,not_sufficient
+tests,Tests pass,{{TEST_COMMAND}} output with exit 0 and zero failures,old run or should pass
+build,Build succeeds,{{BUILD_COMMAND}} output with exit 0,linter passing
+bug,Bug fixed,original symptom or regression test freshly passes,code changed
+subagent,Subagent task done,returned artifacts and inspected diff,agent reports success

@@ -27,7 +27,7 @@ This project uses a layered documentation hierarchy. Start at the top and dive d
 | **[SKILL.md](./SKILL.md)** | Full usage guide: overview → quick start → examples → advanced topics | You are a new user or Claude Code skill consumer |
 | **[QUICKREF.md](./QUICKREF.md)** | Cheat sheet: flags, modes, tables, code blocks | You already know the tool and need a fast lookup |
 | **[REFERENCE.md](./REFERENCE.md)** | Deep dive: architecture, templates, checklists, extension points | You are writing custom prompts or extending the skill |
-| **[ROADMAP.md](./ROADMAP.md)** | Source-backed 1.6.0 roadmap from Anthropic docs and X/Twitter ecosystem signals | You want the next professional feature plan |
+| **[ROADMAP.md](./ROADMAP.md)** | Source-backed roadmap and shipped-feature status | You want the next professional feature plan |
 
 > **For usage** → [SKILL.md](./SKILL.md)  
 > **For quick reference** → [QUICKREF.md](./QUICKREF.md)  
@@ -55,14 +55,22 @@ prompt-builder "review admin dashboard and confirm that all working"
 # Explicit mode
 prompt-builder --mode security-review "audit auth flow"
 
-# Save to file
-prompt-builder --save prompt.txt "refactor api"
+# Drafts are explicit; --save accepts only a fully resolved prompt
+prompt-builder --save-draft prompt.txt "refactor api"
 
 # Token-budget aware generation
 prompt-builder --max-tokens 2000 "design pricing card"
 
 # Resume previous session
 prompt-builder --session-id sess_xxx "continue implementation"
+
+# Record results and inspect local feedback
+prompt-builder --record-outcome sess_xxx success "verified in CI"
+prompt-builder --stats
+prompt-builder --feedback-report
+
+# Inspect a skill before installation
+prompt-builder --trust-details <skill-name>
 ```
 
 ---
@@ -73,21 +81,25 @@ prompt-builder --session-id sess_xxx "continue implementation"
 - **14 Prompt Modes** — feature, audit, bugfix, refactor, design-review, architecture-review, security-review, performance-review, release-check, prd-to-tasks, hackathon, agent-readiness, tooling-review, skill-review
 - **Workflow Pattern Router** — Names the composable agent shape to run (single-pass, prompt-chain, routing, parallel-review, orchestrator-workers, evaluator-optimizer, autonomous-loop) — simple/composable before autonomous
 - **Verification-First Contract** — Every claim split by its proof (source / command / browser-device / blocked-by); no proof → "Blocked", never an optimistic "Working"
+- **Exploration + Write-Safety Contracts** — Ground files before conclusions; write modes start in Planning when risk or scope requires it
+- **Clarify-First Gate** — Ambiguous requests stop with concrete A/B repository targets before diagnosis
+- **Data-Driven Agent Cards** — Reviewer roles, scope, exclusions, evidence, and primary skills load from validated data
 - **Context Diet** — Scores each prompt `lean`/`ok`/`heavy`, flags bloat + missing cache, recommends `--max-tokens`
 - **Quality Bar (dev-metrics aligned)** — Engineered to score 9–10 on the six session-quality dimensions (prompt, context, response, task clarity, verification, tool use); self-reports coverage in `metadata.qualityRubric`
 - **Selective Install Profiles** — `--profile web|backend|mobile|ai-agent|hackathon`: a small, capped, approval-required curated skill set (not a bulk mega-setup)
-- **Skill Discovery & Suggestions** — `--discover` checks installed vs. ecosystem skills (`npx skills find`, offline-degrading); three-state `MATCHED SKILLS` (✓ installed / ⤓ suggested / ? unverified) + an approval-required `SKILL SUGGESTIONS` block with install + rerun. `--dismiss-skill <name>` to silence one
-- **Clarify-First Gate** — on a low-confidence ambiguous task, asks ONE A/B/C question naming the real candidate paths before doing anything
-- **Enforced Readiness** — `--save` refuses a draft prompt with unfilled `<RESOLVE>` markers (`validation.blockingMarkers` pinpoints each); `--save-draft` overrides. Final answer must lead with the solution table `file:line → current → change → why`
 - **Mixed-Platform Lanes** — Auto-creates integration lane when multiple platforms detected
 - **Skill Discovery Preflight** — Scans local skills + ecosystem search + install recommendations
 - **Multi-Agent Task Board** — Task cards with id | owner | skill | title | status | depends_on | artifact
 - **Validation V2** — Quality scoring (100 pts) + orthogonal solution/plan readiness axes
+- **Draft-Safe Saving** — `--save` rejects unresolved markers; `--save-draft` makes intentional scaffold export explicit
 - **30+ Stack Profiles** — Stack-specific best practices, anti-patterns, and verification gates
 - **Model Selection** — Auto-routes to Haiku/Sonnet/Opus by complexity (`--model` override)
-- **Session Memory** — JSON-backed session store with resume (`--session-id`, `--list-sessions`)
+- **Skill Trust Pre-Screen** — Bounded, static, non-executing inspection of local skill text; high-risk suggestions are excluded
+- **Session Memory + Feedback** — Append-only JSONL events, atomic index rebuild, outcome tracking, local stats, and correlation-only feedback reports
+- **Eval Harness V2** — 20 CI-friendly scenarios covering modes, platforms, contracts, and the 6000-token budget
 - **Token Budgeting** — Context-aware section compression (`--max-tokens`, `--context-report`)
-- **Security Hardening** — Untrusted task text neutralized (control/ANSI stripped, section-forging blocked), CSV sanitization, SHA-256 data manifest
+- **Zero Runtime Dependencies** — ANSI output, CSV/JSON/Markdown loading, validation, and analytics use Node.js built-ins
+- **Security Hardening** — Untrusted task text neutralized, RFC-style CSV parsing, schema validation, path controls, and SHA-256 data manifest
 
 ---
 

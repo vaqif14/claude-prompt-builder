@@ -82,7 +82,8 @@ function validatePrompt(promptText) {
   // 7e. Verification-first contract (5 pts): claims must be split by the proof that backs them,
   // with blockers named — "if you cannot prove it, do not claim it".
   const hasVerificationContract = /VERIFICATION CONTRACT/i.test(p) &&
-    /Provable by source|Provable by command|Blocked-by/i.test(p);
+    /NO (?:COMPLETION CLAIMS|VERDICT) WITHOUT FRESH/i.test(p) &&
+    /Required evidence/i.test(p);
   checks.push({ pass: hasVerificationContract, label: 'Verification-first contract present', points: 5 });
 
   // 7f. Quality bar (3 pts): the prompt must carry the dev-metrics quality bar that targets 9–10
@@ -149,38 +150,66 @@ function validatePrompt(promptText) {
   // findings ledger (a file ref without :line is acceptable there), so we relax the :line need when
   // the plan is a ledger ([Sev]/evidence: present).
   const planIdx = p.search(/TASK PLAN/i);
-  const planRegion = planIdx >= 0 ? p.slice(planIdx) : '';
+  const planTail = planIdx >= 0 ? p.slice(planIdx) : '';
+  const planEnd = planTail.search(/TOOL DIRECTIVES/i);
+  const planRegion = planEnd >= 0 ? planTail.slice(0, planEnd) : planTail;
   const isLedger = /evidence:/i.test(planRegion) && !/depends_on:/i.test(planRegion);
   const planUnresolved = /<RESOLVE/i.test(planRegion);
+  const hasFileMap = isLedger || /FILE MAP/i.test(planRegion);
   const planHasLocation = isLedger
     ? /[\w./-]+\.[A-Za-z]{1,5}(:\d+)?/.test(planRegion)
     : /[\w./-]+\.[A-Za-z]{1,5}:\d+/.test(planRegion);
   const planReadiness = !hasTaskPlan ? 'missing'
-    : (planUnresolved || !planHasLocation) ? 'draft' : 'ready';
+    : (planUnresolved || !planHasLocation || !hasFileMap) ? 'draft' : 'ready';
+
+  const diagnostics = [];
+  if (!isLedger && hasTaskPlan && !/FILE MAP/i.test(planRegion)) {
+    diagnostics.push({ code: 'missing-file-map', severity: 'warning', message: 'Write-mode task plan has no FILE MAP.' });
+  }
+  const taskRows = planRegion.split('\n').filter(line => /^\s*\[ \]\s+T\d{2,3}\b/.test(line));
+  for (const row of taskRows) {
+    const id = (row.match(/\bT\d{2,3}\b/) || ['task'])[0];
+    const locations = row.match(/[\w./-]+\.[A-Za-z]{1,5}:\d+/g) || [];
+    if (!locations.length && !/<RESOLVE/i.test(row)) {
+      diagnostics.push({ code: 'missing-primary-file', severity: 'warning', task: id, message: `${id} names no primary file.` });
+    }
+    if (locations.length > 1) {
+      diagnostics.push({ code: 'multiple-primary-files', severity: 'warning', task: id, message: `${id} names multiple primary files.` });
+    }
+    if (!/\|\s*verify:/i.test(row)) {
+      diagnostics.push({ code: 'missing-verification', severity: 'warning', task: id, message: `${id} has no verification field.` });
+    }
+    const description = (row.split('→')[0] || row);
+    const conjunctions = (description.match(/\b(?:and|then|plus)\b|[+&]/gi) || []).length;
+    if (conjunctions > 2) {
+      diagnostics.push({ code: 'too-coarse', severity: 'warning', task: id, message: `${id} likely bundles too many actions.` });
+    }
+  }
 
   // Overall readiness: a prompt is only "ready" to hand off when BOTH the diagnosis and the plan
   // are filled from real code.
   const readiness = (solutionReadiness === 'ready' && planReadiness === 'ready') ? 'ready' : 'draft';
 
-  // blockingMarkers (B2): every unfilled <RESOLVE …> slot or [stack]/[platform]/[skill] placeholder,
-  // with its 1-based line number and the section it sits in — so the CLI/agent can report precisely
-  // what is missing before the prompt may be saved/handed off.
   const blockingMarkers = [];
-  {
-    const plines = p.split('\n');
-    let currentSection = 'PROMPT';
-    for (let i = 0; i < plines.length; i++) {
-      const ln = plines[i];
-      // Section header = a 2-space-indented title line wrapped in ═ rules.
-      if (/^═+\s*$/.test(plines[i - 1] || '') && /^ {2}[A-Z]/.test(ln)) {
-        currentSection = ln.trim().split(/\s+—\s+/)[0].trim();
-      }
-      if (/<RESOLVE/i.test(ln) || /\[(?:stack|platform|skill)\]/i.test(ln)) {
-        const marker = (ln.match(/<RESOLVE[^>]*>/i) || ln.match(/\[(?:stack|platform|skill)\]/i) || [ln.trim()])[0];
-        blockingMarkers.push({ section: currentSection, line: i + 1, marker: String(marker).slice(0, 100) });
-      }
+  let currentSection = 'PROMPT';
+  const sectionNames = [
+    'SYSTEM CONTRACT', 'WORKFLOW PATTERN', 'QUALITY BAR', 'GROUNDED TARGETS',
+    'EXPLORATION CONTRACT', 'GROUNDING CONTRACT', 'CLARIFY-FIRST GATE',
+    'PROBLEM ANALYSIS', 'WRITE SAFETY GATE', 'CONTEXT WINDOW',
+    'SKILL DISCOVERY PREFLIGHT', 'SKILL REVIEW RUBRIC', 'SELECTIVE INSTALL PROFILE',
+    'MATCHED SKILLS', 'SKILL SUGGESTIONS', 'MULTI-AGENT TASK BOARD',
+    'AGENT REVIEW COUNCIL', 'MODEL ASSIGNMENTS', 'TASK PLAN', 'TOOL DIRECTIVES',
+    'CONSTRAINTS', 'STACK BEST PRACTICES', 'STACK ANTI-PATTERNS',
+    'STACK VERIFICATION GATES', 'VERIFICATION CONTRACT', 'ACCEPTANCE CRITERIA',
+    'OUTPUT SCHEMA',
+  ];
+  p.split('\n').forEach((line, index) => {
+    const heading = sectionNames.find(name => line.includes(name));
+    if (heading) currentSection = heading;
+    for (const match of line.matchAll(/<RESOLVE[^>]*>/g)) {
+      blockingMarkers.push({ line: index + 1, section: currentSection, marker: match[0] });
     }
-  }
+  });
 
   return {
     checks,
@@ -193,6 +222,7 @@ function validatePrompt(promptText) {
     solutionReadiness,
     planReadiness,
     readiness,
+    diagnostics,
     blockingMarkers,
   };
 }

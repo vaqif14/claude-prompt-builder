@@ -9,7 +9,20 @@
 
 ## Next Version Research
 
-The source-backed 1.6.0 plan lives in [ROADMAP.md](./ROADMAP.md). Use it when deciding what to implement next, especially for Anthropic-style workflow routing, verification-first prompts, context diet scoring, MCP/tool readiness, hackathon mode, and skill bloat review.
+The source-backed roadmap lives in [ROADMAP.md](./ROADMAP.md). Version 2.0 ships workflow routing,
+verification-first prompts, context diet scoring, trust pre-screening, JSONL feedback, and Eval
+Harness V2.
+
+## Runtime Contracts
+
+- `src/data-loader.js` is the only parser for bundled CSV/JSON/Markdown. Callers declare required
+  columns, unique keys, and enums; untrusted template or security-pattern loading is denied by default.
+- `data/agents.csv` is executable configuration: role, belief, scope, exclusions, required evidence,
+  primary skill, and task triggers.
+- Contract prose lives in `data/contracts/`; edit it there instead of duplicating strings in code.
+- Skill trust is deterministic static screening only. It has bounded reads and never executes a skill.
+- Session history is append-only JSONL. The derived index may be rebuilt from events after corruption.
+- Feedback reports expose correlations and regeneration signals; they never mutate prompt templates.
 
 The condensed pattern catalog is searchable through `data/patterns/agentic-next.csv`:
 

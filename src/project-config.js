@@ -1,5 +1,5 @@
 /**
- * Project Config (v1.12.0)
+ * Project Config
  * Tiny persistent per-project preferences in `.prompt-builder/config.json`:
  *   - discoverEnabled: has the user opted into ecosystem discovery for this project?
  *   - dismissedSkills: skill names the user told us to stop suggesting.

@@ -4,49 +4,45 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.12.0] - 2026-06-11
+## [2.0.0] - 2026-06-11
 
-Real skill discovery + hardened solution flow. Two connected features: (A) the tool itself now
-checks which skills exist (installed vs ecosystem) and emits approval-required install suggestions;
-(B) the clarify→discover→diagnose→solution flow is enforced, not advisory.
+Professional hardening release. Prompt Builder now treats prompt text, configuration data, skill
+recommendations, sessions, and evals as explicit contracts rather than loosely coupled strings.
 
-### Added — Feature A (Skill Discovery & Suggestion)
+### Added
 
-- **`src/skill-discovery.js`** — `discoverSkills(queries, options)`: local scan + ecosystem search via
-  `npx skills find <q> --json` (execFile, no shell; 10s timeout; 1 MB cap; shell-sanitized query).
-  Defensive JSON→plain-text parse; degrades to `status:'unavailable'` with a reason offline. Every
-  registry string is neutralized before it can reach a prompt. Atomic 0600 cache at
-  `.prompt-builder/skill-discovery.json` (query-hash key, 24h TTL via `PROMPT_BUILDER_DISCOVERY_TTL_HOURS`,
-  `--refresh-skills` bypass). Short-circuits on ENOENT/timeout so a no-network run costs ~one timeout.
-- **Three-state `MATCHED SKILLS`** (`classifySkills`): every skill labeled `✓ installed` (with path) /
-  `⤓ suggested (not installed)` / `? unverified` (discovery unavailable). Ordered installed→suggested→
-  unverified; a not-installed skill is never "load first" — its step becomes the install + rerun.
-- **`SKILL SUGGESTIONS` section + console box + `--json` `skillSuggestions[]`** (`buildSkillSuggestions`):
-  ≤3 not-installed, not-dismissed skills ranked by relevance (ecosystem first), each with
-  source, why-it-fits, `npx skills add … -g`, and `/reload-skills` + rerun. Never auto-installed.
-- **CLI flags**: `--discover` / `--no-discover` / `--refresh-skills` / `--dismiss-skill <name>`. Network
-  only on opt-in (flag or stored project preference in `.prompt-builder/config.json`); first run prints a
-  one-line hint. Mutually-exclusive combos rejected (exit 1).
-- **`src/project-config.js`** — per-project `discoverEnabled` + `dismissedSkills`, atomic 0600.
-
-### Added — Feature B (Solution-flow hardening)
-
-- **`CLARIFY-FIRST GATE`** — emitted ONLY when grounding confidence is low and multiple plausible
-  target surfaces exist; poses exactly one A/B/C question naming the real paths, instructs ask-one-and-wait,
-  carries a `Resolved target:` line. Omitted entirely when confidence is high.
-- **Enforcing readiness**: `validatePrompt` gains `blockingMarkers: [{section, line, marker}]` for every
-  unfilled `<RESOLVE>`/placeholder. `--save` refuses a draft prompt (lists the markers); `--save-draft`
-  overrides. `--json` carries `validation.blockingMarkers`.
-- **Solution-table-first output**: OUTPUT SCHEMA requires the final answer to lead with the solution table
-  (`file:line → current → change → why`) for write modes, or the findings ledger for read-only modes.
-- **Gate order** stated in-prompt: clarify → skill suggestions → grounding/diagnosis → solution + task plan.
+- Shared typed data loader for CSV, JSON, and Markdown, including quoted CSV fields, schema checks,
+  unique/enumerated columns, trusted template boundaries, and path controls.
+- Exploration, write-safety, operating-mode, verification, evidence, and subagent contracts under
+  `data/contracts/`.
+- Clarify-first routing for ambiguous repository targets, structured blocking markers, and
+  solution-table/findings-ledger output leads.
+- Data-driven agent cards with role, scope, exclusions, required evidence, primary skill, and
+  deterministic triggers.
+- Bounded static skill trust pre-screen, high-risk suggestion exclusion, and
+  `--trust-details <skill>`.
+- Append-only JSONL session events, atomic/rebuildable index, safe IDs, payload bounds, rotation,
+  legacy migration, outcomes, `--stats`, and `--feedback-report`.
+- 20-scenario Eval Harness V2 plus `validate:data` and the aggregate `npm run verify` release gate.
 
 ### Changed
 
-- assembler honors `options.discovery` + `options.dismissedSkills`; metadata gains `discovery`,
-  `skillSuggestions`, `clarify`. `SECTION_PRIORITIES` += `CLARIFY-FIRST GATE` (P0), `SKILL SUGGESTIONS` (P0).
-  CLI `main()` is async. No new runtime dependencies. +37 offline tests (skill-discovery, skill-suggestions,
-  solution-flow); suite 142 → 179.
+- Removed the `chalk` runtime dependency; the package now has zero runtime dependencies.
+- CLI parsing is strict for unknown options, missing values, invalid modes/models, and token limits.
+- `--save` now rejects unresolved drafts with line/section diagnostics; `--save-draft` explicitly
+  exports a scaffold.
+- Prompt contracts now require an Exploration section, file map, structured diagnostics, concrete
+  verification commands, and conditional subagent dispatch.
+- Skill invocation is demand-driven: optional platform skills appear only when task signals justify
+  them, keeping required workflow contracts inside the default 6000-token budget.
+- `QUALITY BAR` and `WORKFLOW PATTERN` are priority-zero sections and cannot disappear under normal
+  token budgeting.
+
+### Fixed
+
+- `--context-report` no longer crashes from the `qualityRubric` initialization order.
+- Session corruption or a torn final JSONL append no longer hides earlier valid events.
+- CSV parsing no longer breaks on quoted commas, escaped quotes, CRLF, or missing final newlines.
 
 ## [1.11.0] - 2026-06-11
 

@@ -35,14 +35,6 @@ prompt-builder --context-report "refactor api"     # token usage + diet (lean/ok
 prompt-builder --profile web "add a dashboard"      # curated, capped, approval-required skill set
 prompt-builder --profile ai-agent "add a RAG step"  # profiles: web | backend | mobile | ai-agent | hackathon
 
-# Skill discovery (opt-in; offline-degrading) + draft enforcement
-prompt-builder --discover "redesign admin dashboard"   # check installed vs ecosystem; emit SKILL SUGGESTIONS
-prompt-builder --no-discover "add timer"               # offline; static matches labeled "? unverified"
-prompt-builder --refresh-skills --discover "audit api" # ignore the 24h discovery cache
-prompt-builder --dismiss-skill some-skill              # stop suggesting a skill (per project)
-prompt-builder --save out.txt "fix bug"                # REFUSES a draft (unfilled <RESOLVE>); lists markers
-prompt-builder --save-draft out.txt "fix bug"          # write the draft anyway
-
 # Stack profile cache
 prompt-builder --init-stack-profile --stack nextjs
 prompt-builder --refresh-stack-profile "review admin dashboard"
@@ -51,12 +43,20 @@ prompt-builder --no-stack-cache "one-off prompt"
 # Output formats
 prompt-builder --compact "add timer"           # minimal output
 prompt-builder --json "fix bug"                 # JSON for piping
-prompt-builder --save prompt.txt "refactor api" # save to file
+prompt-builder --save prompt.txt "refactor api" # READY prompts only
+prompt-builder --save-draft prompt.txt "refactor api" # explicit unresolved scaffold
 prompt-builder --print-skills-only "design card" # matched skills only
 
 # Discovery
 prompt-builder --list-modes
 prompt-builder --list-stacks
+prompt-builder --trust-details <skill>
+
+# Local outcomes and feedback
+prompt-builder --list-sessions
+prompt-builder --record-outcome <session-id> <success|partial|fail> [note]
+prompt-builder --stats
+prompt-builder --feedback-report
 
 # Validate prompt file
 prompt-builder --validate prompt.txt
@@ -111,6 +111,9 @@ const analysis = skillMatcher.analyzeTask("fix login bug");
 - **Verification Contract** — claims split by proof: provable-by-source / -command / -browser-device / blocked-by. No proof → "Blocked", never an optimistic "Working".
 - **Context Diet** — `lean`/`ok`/`heavy` grade + bloat warnings (`metadata.contextDiet`, `--context-report`).
 - **Quality Bar (dev-metrics aligned)** — engineered to score 9–10 on the 6 session-scorer dimensions (prompt/context/response/task-clarity/verification/tool-use); calls out the weak spots (verification, tool use). `metadata.qualityRubric` reports coverage + gaps.
+- **Exploration / Write Safety** — grounds source files first and separates Planning, Execution, and Review.
+- **Clarify First** — low-confidence targets render repository-backed A/B choices before diagnosis.
+- **Skill Trust Screen** — bounded static inspection; never executes the candidate skill.
 
 ## Platforms (auto-detected)
 
@@ -150,6 +153,9 @@ Plus orthogonal readiness axes (not part of the scaffold score): `solutionReadin
 | `src/skill-matcher.js` | Skill mapping, agent council, task board |
 | `src/workflow-router.js` | Composable agent workflow-pattern selection |
 | `src/prompt-assembler.js` | Prompt generation |
+| `src/data-loader.js` | Typed CSV/JSON/Markdown loading + validation |
+| `src/agent-cards.js` | Data-driven reviewer selection |
+| `src/skill-trust.js` | Bounded static skill trust pre-screen |
 | `src/stack-cache.js` | Project stack profile MD cache |
 | `src/model-router.js` | Complexity-based model selection |
 | `src/context-manager.js` | Token budgeting + section priorities |
@@ -157,10 +163,22 @@ Plus orthogonal readiness axes (not part of the scaffold score): `solutionReadin
 | `src/install-profiles.js` | Curated, capped selective-install profiles |
 | `src/quality-rubric.js` | dev-metrics 6-dimension quality bar + self-assessment |
 | `src/sanitize.js` | CSV sanitization + untrusted-task neutralization |
-| `src/session-store.js` | Session persistence (~/.prompt-builder) |
+| `src/session-store.js` | Append-only JSONL sessions + atomic index |
+| `src/session-analytics.js` | Stats and correlation-only feedback |
 | `src/error-handler.js` | Structured error categorization |
 | `scripts/validate.js` | Validation V2 (quality scoring) |
+| `scripts/validate-data.js` | Data schemas and contract validation |
+| `scripts/eval.js` | 20-scenario CI-friendly eval harness |
 | `scripts/generate-manifest.js` | Rebuild data SHA-256 manifest |
+
+## Release verification
+
+```bash
+npm run validate:data
+npm test
+npm run eval
+npm run verify
+```
 
 ---
 

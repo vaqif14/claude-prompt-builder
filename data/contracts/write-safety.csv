@@ -1,0 +1,6 @@
+id,text
+plan-approval,"For multi-file, shared, or critical code, present the plan and wait for required approval before editing."
+invariant-fence,"Characterize load-bearing invariants before editing: concurrency, idempotency, money/time, authorization, audit data, and applied migrations."
+test-integrity,"Never modify tests merely to make them pass unless the task explicitly changes test behavior; suspect production code first."
+library-check,"Never use a library before confirming it exists in the manifest or lockfile and matches neighboring code."
+environment-protocol,"On environment failures, report the blocker and route around it; do not perform silent environment surgery."

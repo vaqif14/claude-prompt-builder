@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 const { generatePrompt, searchData, validatePrompt, listModes, detectPlatformsMixed } = require('../src/index');
-const { createSession, saveTurn, getSession, listSessions, resumeSession } = require('../src/session-store');
+const sessionStore = require('../src/session-store');
+const {
+  createSession, saveTurn, listSessions, resumeSession, recordOutcome,
+} = sessionStore;
+const { buildStats, buildFeedbackReport } = require('../src/session-analytics');
 const { categorizeError } = require('../src/error-handler');
 const fs = require('fs');
-const chalk = require('chalk');
+const chalk = require('../src/ansi');
 const pkg = require('../package.json');
 
 const RESET = '\x1b[0m';
@@ -45,6 +49,7 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--compact')} "${chalk.yellow('<task>')}"                            ${chalk.gray('# Minimal output')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--json')} "${chalk.yellow('<task>')}"                               ${chalk.gray('# JSON output')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--save')} <file> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Save to file')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--save-draft')} <file> "${chalk.yellow('<task>')}"                 ${chalk.gray('# Explicitly save an unresolved draft')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--print-skills-only')} "${chalk.yellow('<task>')}"                 ${chalk.gray('# Output matched skills')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--stack')} <stack> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override stack detection')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--backend')} "${chalk.yellow('<task>')}"                             ${chalk.gray('# Force backend context')}
@@ -59,6 +64,10 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--full')} "${chalk.yellow('<task>')}"                                ${chalk.gray('# Disable token compression')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage + context-diet breakdown')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--profile')} <web|backend|mobile|ai-agent|hackathon> "${chalk.yellow('<task>')}" ${chalk.gray('# Curated, capped install profile')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--trust-details')} <skill>                         ${chalk.gray('# Static trust-screen details')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--stats')}                                         ${chalk.gray('# Local session statistics')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--record-outcome')} <id> <success|partial|fail> [note] ${chalk.gray('# Record result')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--feedback-report')}                               ${chalk.gray('# Local template feedback signals')}
 
 ${chalk.bold('Modes:')}
   ${chalk.yellow('feature')}            ${chalk.gray('Feature implementation (default)')}
@@ -140,7 +149,7 @@ function parseArgs(args) {
     full: false,
     json: false,
     save: null,
-    noSkillSearch: false,
+    saveDraft: null,
     printSkillsOnly: false,
     search: null,
     validate: null,
@@ -162,55 +171,95 @@ function parseArgs(args) {
     noDiscover: false,
     refreshSkills: false,
     dismissSkill: null,
-    saveDraft: null,
+    trustDetails: null,
+    stats: false,
+    recordOutcome: null,
+    feedbackReport: false,
   };
 
   const taskWords = [];
+  const takeValue = (name, index) => {
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) throw new Error(`${name} requires a value`);
+    return value;
+  };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--help' || arg === '-h') { flags.help = true; }
-    else if (arg === '--mode') { flags.mode = args[++i]; }
-    else if (arg === '--platform') { flags.platform = args[++i]; }
-    else if (arg === '--template') { flags.template = args[++i]; }
-    else if (arg === '--stack') { flags.stack = args[++i]; }
+    else if (arg === '--mode') { flags.mode = takeValue(arg, i); i++; }
+    else if (arg === '--platform') { flags.platform = takeValue(arg, i); i++; }
+    else if (arg === '--template') { flags.template = takeValue(arg, i); i++; }
+    else if (arg === '--stack') { flags.stack = takeValue(arg, i); i++; }
     else if (arg === '--compact') { flags.compact = true; }
     else if (arg === '--full') { flags.full = true; }
     else if (arg === '--json') { flags.json = true; }
-    else if (arg === '--save') { flags.save = args[++i]; }
-    else if (arg === '--no-skill-search') { flags.noSkillSearch = true; }
+    else if (arg === '--save') { flags.save = takeValue(arg, i); i++; }
+    else if (arg === '--save-draft') { flags.saveDraft = takeValue(arg, i); i++; }
     else if (arg === '--print-skills-only') { flags.printSkillsOnly = true; }
-    else if (arg === '--search') { flags.search = args[++i]; }
-    else if (arg === '--validate') { flags.validate = args[++i]; }
+    else if (arg === '--search') { flags.search = takeValue(arg, i); i++; }
+    else if (arg === '--validate') { flags.validate = takeValue(arg, i); i++; }
     else if (arg === '--list-modes') { flags.listModes = true; }
     else if (arg === '--list-stacks') { flags.listStacks = true; }
     else if (arg === '--backend') { flags.backend = true; }
-    else if (arg === '--database') { flags.database = args[++i]; }
+    else if (arg === '--database') { flags.database = takeValue(arg, i); i++; }
     else if (arg === '--init-stack-profile') { flags.initStackProfile = true; }
     else if (arg === '--refresh-stack-profile') { flags.refreshStackProfile = true; }
     else if (arg === '--no-stack-cache') { flags.noStackCache = true; }
-    else if (arg === '--model') { flags.model = args[++i]; }
-    else if (arg === '--session-id') { flags.sessionId = args[++i]; }
+    else if (arg === '--model') { flags.model = takeValue(arg, i); i++; }
+    else if (arg === '--session-id') { flags.sessionId = takeValue(arg, i); i++; }
     else if (arg === '--list-sessions') { flags.listSessions = true; }
-    else if (arg === '--max-tokens') { flags.maxTokens = parseInt(args[++i], 10); }
+    else if (arg === '--max-tokens') { flags.maxTokens = Number(takeValue(arg, i)); i++; }
     else if (arg === '--context-report') { flags.contextReport = true; }
-    else if (arg === '--profile') { flags.profile = args[++i]; }
+    else if (arg === '--profile') { flags.profile = takeValue(arg, i); i++; }
     else if (arg === '--discover') { flags.discover = true; }
     else if (arg === '--no-discover') { flags.noDiscover = true; }
     else if (arg === '--refresh-skills') { flags.refreshSkills = true; }
-    else if (arg === '--dismiss-skill') { flags.dismissSkill = args[++i]; }
-    else if (arg === '--save-draft') { flags.saveDraft = args[++i]; }
+    else if (arg === '--dismiss-skill') { flags.dismissSkill = takeValue(arg, i); i++; }
+    else if (arg === '--trust-details') { flags.trustDetails = takeValue(arg, i); i++; }
+    else if (arg === '--stats') { flags.stats = true; }
+    else if (arg === '--feedback-report') { flags.feedbackReport = true; }
+    else if (arg === '--record-outcome') {
+      const sessionId = takeValue(arg, i);
+      const outcome = args[i + 2];
+      if (!outcome || outcome.startsWith('--')) throw new Error('--record-outcome requires <session-id> <success|partial|fail>');
+      let note = '';
+      if (args[i + 3] && !args[i + 3].startsWith('--')) {
+        note = args[i + 3];
+        i++;
+      }
+      flags.recordOutcome = { sessionId, outcome, note };
+      i += 2;
+    }
+    else if (arg.startsWith('--')) { throw new Error(`Unknown option: ${arg}`); }
     else {
       taskWords.push(arg);
     }
   }
 
+  if (!Number.isInteger(flags.maxTokens) || flags.maxTokens <= 0) {
+    throw new Error('--max-tokens must be a positive integer');
+  }
+  if (flags.model && !['haiku', 'sonnet', 'opus'].includes(flags.model)) {
+    throw new Error('--model must be one of: haiku, sonnet, opus');
+  }
+  if (flags.mode && !listModes().some(mode => mode.key === flags.mode)) {
+    throw new Error(`Unknown mode: ${flags.mode}`);
+  }
+  if (flags.save && flags.saveDraft) throw new Error('--save and --save-draft are mutually exclusive');
   return { flags, task: taskWords.join(' ') };
 }
 
 async function main() {
   const rawArgs = process.argv.slice(2);
-  const { flags, task } = parseArgs(rawArgs);
+  let parsed;
+  try {
+    parsed = parseArgs(rawArgs);
+  } catch (error) {
+    console.error(chalk.red(`  ✖ Error: ${error.message}`));
+    process.exit(1);
+  }
+  const { flags, task } = parsed;
 
   if (flags.help || rawArgs.length === 0) {
     showHelp();
@@ -322,6 +371,79 @@ async function main() {
     process.exit(0);
   }
 
+  if (flags.trustDetails) {
+    const path = require('path');
+    const { scanInstalledSkills } = require('../src/stack-cache');
+    const { assessSkillTrust, renderTrustDetails } = require('../src/skill-trust');
+    const norm = value => String(value || '').toLowerCase().replace(/^.*[:/]/, '').replace(/[^a-z0-9]+/g, '');
+    const installed = scanInstalledSkills({ cwd });
+    let skill = installed.find(item => norm(item.name) === norm(flags.trustDetails));
+    if (!skill) {
+      const cachePath = path.join(cwd, '.prompt-builder', 'skill-discovery.json');
+      try {
+        const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        const candidate = (cache.result && cache.result.available || []).find(item => norm(item.name) === norm(flags.trustDetails));
+        if (candidate) skill = candidate;
+      } catch (_) { /* no cached ecosystem metadata */ }
+    }
+    if (!skill) {
+      console.error(chalk.red(`  ✖ Skill not found locally or in cached discovery metadata: ${flags.trustDetails}`));
+      process.exit(1);
+    }
+    const trust = assessSkillTrust(skill);
+    const output = { skill: skill.name, ...trust, findings: renderTrustDetails(trust) };
+    if (flags.json) console.log(JSON.stringify(output, null, 2));
+    else {
+      console.log(`\n  ${chalk.bold('Skill Trust Details')}: ${chalk.cyan(skill.name)}`);
+      console.log(`  Risk: ${output.risk} | Screened: ${output.screened}`);
+      if (!output.findings.length) console.log('  No static findings. This is not a security guarantee.');
+      for (const finding of output.findings) {
+        console.log(`  • [${finding.severity}] ${finding.pattern} at ${finding.where}`);
+        console.log(`    ${finding.excerpt}`);
+      }
+      console.log('');
+    }
+    process.exit(0);
+  }
+
+  if (flags.stats) {
+    const stats = buildStats(sessionStore);
+    if (flags.json) console.log(JSON.stringify(stats, null, 2));
+    else {
+      console.log(`\n  ${chalk.bold('Session Statistics')}`);
+      console.log(`  Sessions: ${stats.sessions} | Generations: ${stats.generations}`);
+      console.log(`  Average validation: ${stats.averageValidationScore}`);
+      console.log(`  Average estimated tokens: ${stats.averageEstimatedPromptTokens}`);
+      console.log(`  Modes: ${JSON.stringify(stats.perMode)}`);
+      console.log(`  Outcomes: ${JSON.stringify(stats.outcomes)}\n`);
+    }
+    process.exit(0);
+  }
+
+  if (flags.recordOutcome) {
+    const { sessionId, outcome, note } = flags.recordOutcome;
+    const session = recordOutcome(sessionId, outcome, note);
+    const output = { sessionId, outcome: session.outcome, updatedAt: session.updated_at };
+    if (flags.json) console.log(JSON.stringify(output, null, 2));
+    else console.log(`  ${chalk.green('✓')} Outcome recorded: ${sessionId} → ${session.outcome}`);
+    process.exit(0);
+  }
+
+  if (flags.feedbackReport) {
+    const report = buildFeedbackReport(sessionStore);
+    if (flags.json) console.log(JSON.stringify(report, null, 2));
+    else {
+      console.log(`\n  ${chalk.bold('Feedback Report')}`);
+      console.log(`  Samples: ${JSON.stringify(report.sampleCounts)}`);
+      console.log(`  Failure correlations: ${JSON.stringify(report.failureCorrelations)}`);
+      console.log(`  Regenerations within ${report.regenerationWindowMinutes}m: ${report.regenerations.length}`);
+      console.log('  Template sections to revisit:');
+      for (const item of report.sectionsToRevisit) console.log(`  • ${item.section}: ${item.signals} signal(s)`);
+      console.log(`  ${report.note}\n`);
+    }
+    process.exit(0);
+  }
+
   let effectiveTask = task;
   if (!effectiveTask && flags.initStackProfile && (flags.stack || flags.database || flags.platform)) {
     effectiveTask = `initialize ${flags.stack || flags.database || flags.platform} stack profile`;
@@ -402,9 +524,29 @@ async function main() {
   let sessionPersisted = false;
   try {
     if (!sessionId || !resumeSession(sessionId)) {
-      sessionId = createSession(effectiveTask, result.metadata.mode, result.metadata.stack, sessionId || undefined);
+      sessionId = createSession(
+        effectiveTask,
+        result.metadata.mode,
+        result.metadata.stack,
+        sessionId || undefined,
+        { template: result.metadata.template }
+      );
     }
-    saveTurn(sessionId, effectiveTask, result.prompt, result.validation.score);
+    const sectionNames = [
+      'SYSTEM CONTRACT', 'WORKFLOW PATTERN', 'QUALITY BAR', 'GROUNDED TARGETS',
+      'EXPLORATION CONTRACT', 'GROUNDING CONTRACT', 'PROBLEM ANALYSIS',
+      'WRITE SAFETY GATE', 'SKILL DISCOVERY PREFLIGHT', 'SKILL REVIEW RUBRIC',
+      'MATCHED SKILLS', 'SKILL SUGGESTIONS', 'MULTI-AGENT TASK BOARD',
+      'AGENT REVIEW COUNCIL', 'TASK PLAN', 'VERIFICATION CONTRACT',
+    ].filter(name => result.prompt.includes(name));
+    saveTurn(sessionId, effectiveTask, result.prompt, result.validation.score, {
+      estimatedTokens: result.metadata.contextDiet.estTokens,
+      mode: result.metadata.mode,
+      stack: result.metadata.stack,
+      template: result.metadata.template,
+      skillSuggestions: result.metadata.skillSuggestions.map(item => item.name),
+      sections: sectionNames,
+    });
     sessionPersisted = true;
   } catch (error) {
     if (flags.sessionId || flags.listSessions) {
@@ -441,30 +583,25 @@ async function main() {
       metadata: result.metadata,
       validation: result.validation,
       skillSuggestions: result.metadata.skillSuggestions || [],
+      excludedSkillSuggestions: result.metadata.excludedSkillSuggestions || [],
       discovery: result.metadata.discovery || null,
     }, null, 2));
     process.exit(0);
   }
 
-  // --save / --save-draft (B2): --save refuses a DRAFT prompt (unfilled RESOLVE/placeholder
-  // markers remain); --save-draft writes anyway. Either way the target file is the flag's value.
-  const saveTarget = flags.save || flags.saveDraft;
-  if (saveTarget) {
-    const markers = result.validation.blockingMarkers || [];
-    const isDraft = (result.validation.readiness || 'draft') !== 'ready';
-    if (isDraft && !flags.saveDraft) {
-      console.error(`  ${chalk.red('✖ Refusing to save a DRAFT prompt')} — ${markers.length} unfilled marker(s) remain.`);
-      console.error(`  ${chalk.gray('Fill these (read the resolved targets), or pass --save-draft to write the draft anyway:')}`);
-      for (const m of markers.slice(0, 25)) {
-        console.error(`    ${chalk.yellow(m.section)} ${chalk.gray(`(line ${m.line})`)}: ${m.marker}`);
+  // --save / --save-draft
+  if (flags.save || flags.saveDraft) {
+    if (flags.save && result.validation.readiness !== 'ready') {
+      console.error(chalk.red('  ✖ DRAFT: refusing --save because unresolved markers remain.'));
+      for (const marker of result.validation.blockingMarkers.slice(0, 12)) {
+        console.error(`    line ${marker.line} [${marker.section}] ${marker.marker}`);
       }
+      console.error(chalk.gray('  Use --save-draft <file> only when you intentionally want the unresolved scaffold.'));
       process.exit(1);
     }
-    fs.writeFileSync(saveTarget, result.prompt, 'utf-8');
-    if (flags.saveDraft && isDraft) {
-      console.log(`  ${chalk.yellow('⚠ Saved DRAFT')} to ${chalk.cyan(saveTarget)} (${markers.length} unfilled markers) — fill before handoff.`);
-    }
-    console.log(`  ${chalk.green('✓')} Prompt saved to ${chalk.cyan(saveTarget)}`);
+    const savePath = flags.save || flags.saveDraft;
+    fs.writeFileSync(savePath, result.prompt, 'utf-8');
+    console.log(`  ${chalk.green('✓')} ${flags.saveDraft ? 'Draft prompt' : 'Prompt'} saved to ${chalk.cyan(savePath)}`);
     console.log(`  ${chalk.gray(`Mode: ${result.metadata.mode} | Platforms: ${result.metadata.platforms?.join(', ') || 'general'} | Scaffold: ${result.validation.score}/100 | Solution: ${(result.validation.solutionReadiness || 'draft').toUpperCase()} | Plan: ${(result.validation.planReadiness || 'draft').toUpperCase()}`)}`);
     if ((result.validation.readiness || 'draft') !== 'ready') {
       console.log(`  ${chalk.yellow('→ DRAFT:')} ${chalk.gray('read the resolved targets, fill PROBLEM ANALYSIS (root cause + fix) and TASK PLAN (file:line tasks + acceptance), then the prompt is ready.')}`);
@@ -496,6 +633,7 @@ async function main() {
     for (const s of suggestions) {
       lines.push(`${chalk.cyan('•')} ${chalk.bold.white(s.name)} ${chalk.gray(`(${s.source})`)}`);
       lines.push(`  ${chalk.gray(s.fits)}`);
+      lines.push(`  ${chalk.gray(s.trustNote)}`);
       lines.push(`  ${chalk.green(s.install)}  ${chalk.gray('then /reload-skills + rerun')}`);
     }
     lines.push(chalk.gray('Dismiss one with: --dismiss-skill <name>'));

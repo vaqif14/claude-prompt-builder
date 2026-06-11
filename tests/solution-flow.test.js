@@ -23,43 +23,39 @@ function ambiguousRepo() {
   return cwd;
 }
 
-console.log('\nSolution Flow (Feature B) Tests');
+console.log('\nSolution Flow Tests');
 
-// ── B1 ──────────────────────────────────────────────────────────────────────────────────────
-test('B1: low-confidence ambiguous task → CLARIFY-FIRST GATE with A/B options naming real paths', () => {
+test('low-confidence ambiguous task → CLARIFY-FIRST GATE with real paths', () => {
   const cwd = ambiguousRepo();
   const r = generatePrompt('redesign this', { cwd });
-  assert(/CLARIFY-FIRST GATE/.test(r.prompt), 'gate should be present for ambiguous task');
-  assert(r.metadata.clarify, 'metadata.clarify set');
-  assert(/\n {4}A\) /.test(r.prompt) && /\n {4}B\) /.test(r.prompt), 'A/B options rendered');
-  assert(/adminpanel\.tsx|reportsboard\.tsx/.test(r.prompt), 'options name real repo paths');
-  assert(r.prompt.indexOf('CLARIFY-FIRST GATE') < r.prompt.indexOf('PROBLEM ANALYSIS'), 'clarify precedes diagnosis');
+  assert(/CLARIFY-FIRST GATE/.test(r.prompt));
+  assert(r.metadata.clarify);
+  assert(/\n {4}A\) /.test(r.prompt) && /\n {4}B\) /.test(r.prompt));
+  assert(/adminpanel\.tsx|reportsboard\.tsx/.test(r.prompt));
+  assert(r.prompt.indexOf('CLARIFY-FIRST GATE') < r.prompt.indexOf('PROBLEM ANALYSIS'));
 });
 
-test('B1: high-confidence task (names a real file) → NO clarify gate', () => {
+test('high-confidence named file → no clarify gate', () => {
   const cwd = ambiguousRepo();
   const r = generatePrompt('redesign the reportsboard component', { cwd });
-  assert(!/CLARIFY-FIRST GATE/.test(r.prompt), 'no gate when the target is clear');
+  assert(!/CLARIFY-FIRST GATE/.test(r.prompt));
   assert.strictEqual(r.metadata.clarify, null);
 });
 
-// ── B2 ──────────────────────────────────────────────────────────────────────────────────────
-test('B2: validatePrompt returns blockingMarkers with line numbers + sections', () => {
-  const r = generatePrompt('refactor the payment service', {});
-  const v = r.validation;
-  assert(Array.isArray(v.blockingMarkers) && v.blockingMarkers.length > 0, 'unfilled prompt has blocking markers');
-  assert(v.blockingMarkers.every(m => typeof m.line === 'number' && m.section && m.marker), 'each marker has line/section/marker');
-  assert(v.blockingMarkers.some(m => /PROBLEM ANALYSIS/.test(m.section)), 'diagnosis markers reported');
+test('validator returns blocking markers with line and section', () => {
+  const v = generatePrompt('refactor the payment service', {}).validation;
+  assert(Array.isArray(v.blockingMarkers) && v.blockingMarkers.length > 0);
+  assert(v.blockingMarkers.every(m => typeof m.line === 'number' && m.section && m.marker));
+  assert(v.blockingMarkers.some(m => /PROBLEM ANALYSIS/.test(m.section)));
 });
 
-test('B2: filling all RESOLVE markers clears blockingMarkers', () => {
+test('filling all RESOLVE markers clears blocking markers', () => {
   const r = generatePrompt('refactor the payment service', {});
   const filled = r.prompt.replace(/<RESOLVE[^>]*>/g, 'src/PaymentService.java:142 — extract retry() helper');
-  const v = validatePrompt(filled);
-  assert.strictEqual(v.blockingMarkers.length, 0, 'no markers after filling');
+  assert.strictEqual(validatePrompt(filled).blockingMarkers.length, 0);
 });
 
-test('B2: --save refuses a draft (exit 1, lists markers); --save-draft writes', () => {
+test('--save refuses a draft; --save-draft writes it', () => {
   const cwd = ambiguousRepo();
   const bin = path.join(__dirname, '..', 'bin', 'prompt-builder.js');
   const out = path.join(cwd, 'p.txt');
@@ -68,32 +64,29 @@ test('B2: --save refuses a draft (exit 1, lists markers); --save-draft writes', 
     execFileSync('node', [bin, '--no-discover', '--no-stack-cache', '--save', out, 'add a timer'], { cwd, stdio: 'pipe' });
   } catch (e) {
     blocked = true;
-    assert(/DRAFT/.test(String(e.stderr || '')), 'error explains DRAFT');
+    assert(/DRAFT/.test(String(e.stderr || '')));
   }
-  assert(blocked, '--save must exit non-zero on a draft');
-  assert(!fs.existsSync(out), 'draft file not written by --save');
+  assert(blocked);
+  assert(!fs.existsSync(out));
   execFileSync('node', [bin, '--no-discover', '--no-stack-cache', '--save-draft', out, 'add a timer'], { cwd, stdio: 'pipe' });
-  assert(fs.existsSync(out), '--save-draft writes the file');
+  assert(fs.existsSync(out));
 });
 
-test('B2: OUTPUT SCHEMA requires leading with the solution table (write) / findings ledger (read-only)', () => {
-  const write = generatePrompt('add a timer', {}).prompt;
-  assert(/SOLUTION TABLE — one row per edit: `file:line → current → change → why`/.test(write), 'write mode leads with solution table');
-  const audit = generatePrompt('review the dashboard and confirm all working', {}).prompt;
-  assert(/FINDINGS LEDGER table/.test(audit), 'read-only leads with findings ledger');
+test('output schema leads with solution table or findings ledger', () => {
+  assert(/SOLUTION TABLE — one row per edit: `file:line → current → change → why`/.test(generatePrompt('add a timer', {}).prompt));
+  assert(/FINDINGS LEDGER table/.test(generatePrompt('review the dashboard and confirm all working', {}).prompt));
 });
 
-// ── B3 ──────────────────────────────────────────────────────────────────────────────────────
-test('B3: invocation gate order stated; not-installed never load-first', () => {
+test('skill invocation gate order is explicit', () => {
   const cwd = ambiguousRepo();
   const discovery = {
-    status: 'ok', reason: null, fromCache: false,
-    installed: [], available: [{ name: 'ui-ux-pro-max', description: 'visual review', query: 'ui ux design review', relevance: 0.9, status: 'available' }],
+    status: 'ok', reason: null, fromCache: false, installed: [],
+    available: [{ name: 'ui-ux-pro-max', description: 'visual review', query: 'ui ux design review', relevance: 0.9, status: 'available' }],
     unavailable: [],
   };
   const r = generatePrompt('redesign this', { cwd, discovery });
-  assert(/GATE ORDER:/.test(r.prompt), 'gate order directive present');
-  assert(!/1\. \[(?:suggested|unverified)\][^\n]*\n[^\n]*Load this first/.test(r.prompt), 'no not-installed load-first');
+  assert(/GATE ORDER:/.test(r.prompt));
+  assert(!/1\. \[(?:suggested|unverified)\][^\n]*\n[^\n]*Load this first/.test(r.prompt));
 });
 
 console.log('');

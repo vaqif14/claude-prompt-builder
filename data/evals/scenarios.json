@@ -1,0 +1,22 @@
+[
+  {"id":"feature-web","task":"add React timer component","mode":"feature","expect":["NO COMPLETION CLAIMS","FILE MAP","Frontend/Web Code Reviewer"]},
+  {"id":"feature-backend","task":"implement backend API endpoint","mode":"feature","expect":["NO COMPLETION CLAIMS","Backend/Service Code Reviewer"]},
+  {"id":"bugfix","task":"fix failing payment bug","mode":"bugfix","expect":["original symptom","TASK PLAN"]},
+  {"id":"refactor","task":"refactor Java service","mode":"refactor","expect":["PLANNING","FILE MAP"]},
+  {"id":"audit","task":"audit admin dashboard","mode":"audit","expect":["NO VERDICT","Browser QA Engineer"]},
+  {"id":"design","task":"design review checkout screen","mode":"design-review","expect":["NO VERDICT","Lead Product Designer"]},
+  {"id":"architecture","task":"architecture review backend","mode":"architecture-review","expect":["System Architect","NO VERDICT"]},
+  {"id":"security","task":"security review auth flow","mode":"security-review","expect":["Security Auditor","NO VERDICT"]},
+  {"id":"performance","task":"performance review slow query","mode":"performance-review","expect":["Performance Engineer","NO VERDICT"]},
+  {"id":"release","task":"release readiness check","mode":"release-check","expect":["NO VERDICT","findings evidence"]},
+  {"id":"prd","task":"break PRD into tasks","mode":"prd-to-tasks","expect":["NO COMPLETION CLAIMS","FILE MAP"]},
+  {"id":"hackathon","task":"build hackathon MVP demo","mode":"hackathon","expect":["orchestrator-workers","Subagent Dispatch Protocol"]},
+  {"id":"agent-readiness","task":"audit .claude setup","mode":"agent-readiness","expect":["NO VERDICT","findings ledger"]},
+  {"id":"tooling-review","task":"MCP tooling review","mode":"tooling-review","expect":["NO VERDICT","Tooling"]},
+  {"id":"skill-review","task":"review this SKILL.md","mode":"skill-review","expect":["SKILL REVIEW RUBRIC","Behavioral value"]},
+  {"id":"ios","task":"fix SwiftUI login bug","mode":"bugfix","expect":["iOS/Swift Reviewer","NO COMPLETION CLAIMS"]},
+  {"id":"android","task":"audit Android Compose screen","mode":"audit","expect":["Android/Kotlin Reviewer","Device/Simulator QA Engineer"]},
+  {"id":"mixed","task":"ios app with backend api","mode":"feature","expect":["orchestrator-workers","Subagent Dispatch Protocol"]},
+  {"id":"cli","task":"add CLI flag","mode":"feature","expect":["CLI/Tooling Reviewer","exit codes"]},
+  {"id":"unknown","task":"improve mysterious module","mode":"feature","expect":["General Software Task","test command not detected"]}
+]

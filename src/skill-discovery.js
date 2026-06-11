@@ -1,5 +1,5 @@
 /**
- * Skill Discovery engine (v1.12.0)
+ * Skill Discovery engine
  *
  * Checks which relevant skills exist for a task: what is installed locally, and what the open
  * ecosystem offers via the official `npx skills` CLI. Best-effort and offline-degrading — if the

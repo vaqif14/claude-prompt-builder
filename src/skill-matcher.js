@@ -144,9 +144,28 @@ function analyzeTask(task) {
 function getSkillInvocationPlan(task, template, domains, platforms = [], complexity, options) {
   const lower = task.toLowerCase();
   const plan = [];
+  const conditionalSkillSignals = {
+    'browser-qa': /\b(?:review|audit|check|confirm|verify|qa|working|browser|responsive|screenshot)\b/,
+    'database-migrations': /\b(?:migration|migrate|schema|ddl)\b/,
+    'deploy-to-vercel': /\b(?:vercel|deploy|deployment|release)\b/,
+    'docker-patterns': /\b(?:docker|container|compose|image)\b/,
+    'build-ios-apps:ios-debugger-agent': /\b(?:bug|fix|debug|crash|test|review|audit|simulator|xcode)\b/,
+    'build-ios-apps:swiftui-performance-audit': /\b(?:performance|slow|lag|jank|profile|optimi[sz]e)\b/,
+    'postgres-patterns': /\b(?:postgres|postgresql|sql|database|query|index)\b/,
+    'security-review': /\b(?:security|auth|authorization|permission|jwt|cors|xss|csrf|secret)\b/,
+    'springboot-patterns': /\b(?:spring|springboot|spring boot|java|jpa|hibernate)\b/,
+    'test-android-apps:android-performance': /\b(?:performance|slow|lag|jank|profile|optimi[sz]e)\b/,
+    'ui-ux-pro-max': /\b(?:design|ui|ux|visual|layout|theme|responsive|screen|page)\b/,
+    'verification-loop': /\b(?:bug|fix|test|review|audit|check|confirm|verify|qa|working|release)\b/,
+  };
   const add = (skill, reason, instruction) => {
     if (plan.some(item => item.skill === skill)) return;
     plan.push({ skill, reason, instruction, model: selectModel(task, complexity, options) });
+  };
+  const includeConditional = skill => {
+    if (skill === 'find-skills') return false;
+    const signal = conditionalSkillSignals[skill];
+    return signal ? signal.test(lower) : false;
   };
 
   add(
@@ -166,7 +185,7 @@ function getSkillInvocationPlan(task, template, domains, platforms = [], complex
       `${platform.label} primary skill for this task`,
       `Load this first for ${platform.label}. Expected evidence: ${platform.evidence}.`
     );
-    for (const skill of (platform.defaultSkills || []).filter(s => s !== primary)) {
+    for (const skill of (platform.defaultSkills || []).filter(s => s !== primary && includeConditional(s))) {
       add(
         skill,
         `${platform.label} skill — conditional`,
@@ -315,141 +334,9 @@ function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', st
   ];
 }
 
-// Specialist code reviewers keyed by detected platform id. This is the expert coverage that
-// the LIVE council (getAgentCouncil) emits — so a mobile, devops, data, or any-backend task gets
-// the RIGHT reviewer instead of a web-biased "Frontend Code Reviewer". (getUniversalAgentRoster
-// had this coverage but was never wired into the prompt; this folds it into the live council.)
-// Each entry: [name, mission, output].
-const PLATFORM_REVIEWERS = {
-  web: ['Frontend/Web Code Reviewer', 'Trace routes, components, hooks, API calls, i18n keys, and client/server state boundaries.', 'File:line findings, broken assumptions, missing UI states, risky code paths, and scoped fix plan.'],
-  backend: ['Backend/Service Code Reviewer', 'Trace controllers, services, repositories, transaction boundaries, error/exception handling, and public contracts.', 'File:line findings, invariant/concurrency/transaction risks, contract risks, and scoped fix plan.'],
-  'node-express': ['Node/Express Reviewer', 'Trace routes, middleware chain, services, and async error handling.', 'File:line findings, middleware/contract risks, and scoped fix plan.'],
-  nestjs: ['NestJS Reviewer', 'Trace modules, controllers, providers, the DI graph, and decorators.', 'File:line findings, DI/module-boundary risks, and scoped fix plan.'],
-  'python-fastapi': ['FastAPI Reviewer', 'Trace async handlers, Pydantic models, dependency injection, and migrations.', 'File:line findings, async/validation risks, and scoped fix plan.'],
-  'python-django': ['Django Reviewer', 'Trace MVT structure, DRF serializers, ORM queries, and migrations.', 'File:line findings, ORM/migration risks, and scoped fix plan.'],
-  python: ['Python Reviewer', 'Trace app structure, handlers, ORM models, and type hints.', 'File:line findings, typing/test gaps, and scoped fix plan.'],
-  'ruby-rails': ['Rails Reviewer', 'Trace MVC, Active Record, callbacks, and migrations.', 'File:line findings, callback/migration risks, and scoped fix plan.'],
-  go: ['Go Reviewer', 'Trace handler layers, storage, and goroutine/error handling.', 'File:line findings, concurrency/error risks, and scoped fix plan.'],
-  rust: ['Rust Reviewer', 'Trace crate structure, ownership, async runtime, and error handling.', 'File:line findings, safety/borrow risks, and scoped fix plan.'],
-  dotnet: ['.NET Reviewer', 'Trace controllers/services, EF Core, and async patterns.', 'File:line findings, EF/async risks, and scoped fix plan.'],
-  laravel: ['Laravel/PHP Reviewer', 'Trace routes, controllers, Eloquent models, and Blade views.', 'File:line findings, Eloquent/validation risks, and scoped fix plan.'],
-  ios: ['iOS/Swift Reviewer', 'Trace the SwiftUI/UIKit hierarchy, view models, navigation, and Xcode build.', 'File:line findings, retain-cycle/main-thread/state risks, and scoped fix plan.'],
-  android: ['Android/Kotlin Reviewer', 'Trace Compose/Activity structure, view models, coroutines, and Gradle build.', 'File:line findings, lifecycle/coroutine/state risks, and scoped fix plan.'],
-  flutter: ['Flutter/Dart Reviewer', 'Trace the widget tree, state management, and platform channels.', 'File:line findings, rebuild/state/async risks, and scoped fix plan.'],
-  'react-native': ['React Native Reviewer', 'Trace RN/Expo screens, navigation, native modules, and platform differences.', 'File:line findings, bridge/platform-parity risks, and scoped fix plan.'],
-  desktop: ['Desktop App Reviewer', 'Trace window/shell states, IPC, native integrations, and packaging.', 'File:line findings, IPC/packaging risks, and scoped fix plan.'],
-  cli: ['CLI/Tooling Reviewer', 'Trace commands, flags, exit codes, and I/O handling.', 'Flag/exit-code/edge-case findings and scoped fix plan.'],
-  devops: ['DevOps/Release Reviewer', 'Review the build/deploy pipeline, env config, secrets, rollback, and observability.', 'Pipeline map, env/secret risks, rollback plan, monitoring gaps, release checklist.'],
-  ai: ['AI/LLM Reviewer', 'Review model calls, prompt/data flow, evals, persistence, safety, and cost.', 'AI flow map, eval cases, prompt-injection/safety risks, and cost report.'],
-  'data-ml': ['Data/ML Reviewer', 'Review pipelines, model versioning, evals, and reproducibility.', 'Data-flow map, metric evidence, reproducibility/leakage risks.'],
-  db: ['Database Reviewer', 'Review schema, migrations, query plans, and indexing.', 'ER map, slow-query analysis, index recommendations, migration risk.'],
-};
-const MOBILE_IDS = new Set(['ios', 'android', 'flutter', 'react-native']);
-
-// `platforms` (the detectPlatformsMixed output) makes the council platform-aware: one specialist
-// reviewer per detected platform, plus the right runtime-QA agent (simulator/emulator for
-// native-mobile-only surfaces, browser for web). When no platforms are passed it falls back to
-// the surface-based web/backend default, so callers that omit it keep working.
 function getAgentCouncil(task, mode, complexity, options, surface = {}, platforms = []) {
-  const { isUi = true, isService = false } = surface;
-  const lower = task.toLowerCase();
-  const agents = [];
-  const add = (name, mission, output) => {
-    if (agents.some(a => a.name === name)) return;
-    agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
-  };
-
-  const ids = new Set((platforms || []).map(p => p.id).filter(Boolean));
-  const isNativeMobile = [...ids].some(id => MOBILE_IDS.has(id));
-  const hasWeb = ids.has('web');
-
-  // Designer passes apply to any visual surface (web OR mobile). Enterprise UI Architect is
-  // web/admin-specific — do not put it on a pure native-mobile task.
-  if (/\b(?:design|ui|ux|dashboard|pages?|screen|visual|layout)\b/.test(lower)) {
-    add(
-      'Lead Product Designer',
-      'Judge whether the screen feels professional, coherent, and useful at first glance.',
-      'Visual hierarchy, spacing rhythm, typography, density, contrast, empty/loading/error state quality, and top 5 design fixes.'
-    );
-    if (hasWeb || ids.size === 0 || /\b(?:admin|dashboard|mui|enterprise)\b/.test(lower)) {
-      add(
-        'Enterprise UI Architect',
-        'Check admin/dashboard composition against established enterprise UI patterns.',
-        'Layout map, widget priority, card/table/chart quality, token usage, and component-system violations.'
-      );
-    }
-  }
-
-  // Primary code reviewers: one specialist per detected platform; fall back to the surface
-  // default when no platform was detected.
-  let addedPlatformReviewer = false;
-  for (const id of ids) {
-    const r = PLATFORM_REVIEWERS[id];
-    if (r) { add(...r); addedPlatformReviewer = true; }
-  }
-  if (!addedPlatformReviewer) {
-    add(...(isService && !isUi ? PLATFORM_REVIEWERS.backend : PLATFORM_REVIEWERS.web));
-  }
-
-  // Runtime QA: simulator/emulator for native-mobile-only surfaces, browser otherwise.
-  if (mode === 'audit' || /\b(?:review|audit|verify|confirm|working|qa)\b/.test(lower)) {
-    if (isNativeMobile && !hasWeb) {
-      add(
-        'Device/Simulator QA Engineer',
-        'Prove runtime behavior on a simulator/emulator or real device.',
-        'Device/OS matrix, screenshots, logs/logcat, crash/ANR checks, and interaction results.'
-      );
-    } else {
-      add(
-        'Browser QA Engineer',
-        'Prove runtime behavior with browser evidence.',
-        'URLs, viewports, screenshots, console errors, failed requests, responsive overflow, and interaction results.'
-      );
-    }
-    add(
-      'Verification Engineer',
-      'Run static gates and summarize pass/fail truthfully.',
-      'Commands run, pass/fail status, blockers, and residual risk.'
-    );
-  }
-
-  // Cross-cutting specialists (demand-driven; deduped by name against the platform reviewers).
-  if (mode === 'security-review' || /\b(?:security|auth|jwt|xss|csrf)\b/.test(lower)) {
-    add(
-      'Security Auditor',
-      'Review auth, authorization, secrets, XSS/CSRF, and data exposure.',
-      'Risk findings with CWE reference, reproduction steps, and fix priority.'
-    );
-  }
-  if (mode === 'performance-review' || /\b(?:performance|slow|optimize|lag)\b/.test(lower)) {
-    add(
-      'Performance Engineer',
-      'Profile hot paths and measure before/after.',
-      'Baseline metrics, profiler evidence, optimization recommendation, post-fix measurements.'
-    );
-  }
-  if (mode === 'architecture-review' || /\b(?:architecture|hexagonal|clean|domain)\b/.test(lower)) {
-    add(
-      'System Architect',
-      'Map boundaries, coupling, cohesion, and dependency direction.',
-      'Architecture map, coupling issues, dependency violations, restructure recommendation.'
-    );
-  }
-  if (/\b(?:database|db|migrations?|schema|sql|postgres|mongo(?:db)?|redis|prisma|typeorm|jpa)\b/.test(lower)) {
-    add(...PLATFORM_REVIEWERS.db);
-  }
-  if (/\b(?:microservices?|grpc|kafka|rabbitmq|events?|integration|webhook)\b/.test(lower)) {
-    add(
-      'Integration/Test Agent',
-      'Review cross-service contracts, event flow, idempotency, and test coverage.',
-      'Integration map, contract compatibility, event flow diagram, test gap analysis.'
-    );
-  }
-  if (/\b(?:devops|deploy|ci|cd|pipeline|docker|kubernetes|infra)\b/.test(lower)) {
-    add(...PLATFORM_REVIEWERS.devops);
-  }
-
-  return agents;
+  const { selectAgentCards } = require('./agent-cards');
+  return selectAgentCards(task, mode, complexity, options, surface, platforms, options && options.dataDir);
 }
 
 function getUniversalAgentRoster(task, mode, platforms = [], complexity, options) {
@@ -704,7 +591,8 @@ function classifySkills(skillPlan, discovery) {
 
 // ── Skill suggestions (A4) ─────────────────────────────────────────────────────────────────
 // Up to 3 not-installed, not-dismissed skills the user could install to do this task better.
-function buildSkillSuggestions(annotatedPlan, discovery, dismissed = [], task = '') {
+function buildSkillSuggestions(annotatedPlan, discovery, dismissed = [], task = '', options = {}) {
+  const { assessSkillTrust, renderTrustNote } = require('./skill-trust');
   const dismissedNorm = new Set((dismissed || []).map(skillNorm));
   const installedNorm = new Set(((discovery && discovery.installed) || []).map(s => skillNorm(s.name)));
   const available = (discovery && discovery.available) || [];
@@ -712,35 +600,47 @@ function buildSkillSuggestions(annotatedPlan, discovery, dismissed = [], task = 
   const out = [];
   const seen = new Set();
 
-  const push = (name, source, fits, relevance) => {
+  const excluded = [];
+  const push = (name, source, fits, relevance, candidate = {}) => {
     const key = skillNorm(name);
     if (!name || seen.has(key) || dismissedNorm.has(key) || installedNorm.has(key)) return;
     if (key === skillNorm('find-skills')) return; // meta-skill, not an install suggestion
+    const trust = assessSkillTrust(candidate, { dataDir: options.dataDir });
+    if (trust.risk === 'high') {
+      seen.add(key);
+      excluded.push({
+        name,
+        risk: trust.risk,
+        screened: trust.screened,
+        patterns: [...new Set(trust.findings.map(finding => finding.pattern))],
+      });
+      return;
+    }
     seen.add(key);
-    // Defense-in-depth: neutralize again at render time. discoverSkills already sanitizes registry
-    // text, but a library caller could pass an unsanitized discovery model — a skill name/description
-    // must never be able to forge a prompt section here.
-    const safeName = neutralizeUserText(String(name), 80);
     out.push({
-      name: safeName,
-      source: neutralizeUserText(String(source), 120),
-      fits: neutralizeUserText(String(fits), 220),
-      install: `npx skills add ${safeName} -g`,
+      name,
+      source,
+      fits,
+      install: `npx skills add ${name} -g`,
       rerun: `prompt-builder "${safeTask}"`,
       relevance: relevance || 0,
+      trust,
+      trustNote: renderTrustNote(trust),
     });
   };
 
   // 1) Ecosystem hits first — real relevance from the registry search.
   for (const e of available) {
-    push(e.name, `ecosystem search "${e.query}"`, `${e.description || 'matched the ecosystem search'} — surfaced for this task.`, e.relevance);
+    push(e.name, `ecosystem search "${e.query}"`, `${e.description || 'matched the ecosystem search'} — surfaced for this task.`, e.relevance, e);
   }
   // 2) Plan skills flagged as suggested (task-analysis matches not installed, not already added).
   for (const item of annotatedPlan.filter(s => s.statusState === 'suggested')) {
-    push(item.skill, item.source || 'static match', `${item.reason} — needed for this task.`, 0.5);
+    push(item.skill, item.source || 'static match', `${item.reason} — needed for this task.`, 0.5, item);
   }
 
-  return out.sort((a, b) => b.relevance - a.relevance).slice(0, 3);
+  const suggestions = out.sort((a, b) => b.relevance - a.relevance).slice(0, 3);
+  suggestions.excluded = excluded;
+  return suggestions;
 }
 
 module.exports = {

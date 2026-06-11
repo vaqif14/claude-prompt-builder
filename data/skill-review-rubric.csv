@@ -1,0 +1,9 @@
+axis,check,zero_if
+Injection surface,Can instructions override or leak the host agent contract?,Unbounded host-instruction control
+Exfiltration surface,Can local files environment values or secrets reach a network sink?,Unreviewed data transmission
+Privilege and scope,Does the skill write outside its root or request elevated permissions?,Unjustified broad access
+Trigger hygiene,Is activation explicit narrow and user-intended?,Always-on or session-start activation
+Supply chain,What code packages or remote scripts does it download or execute?,Opaque remote execution
+Decision heuristics,Does it change what the agent does in a concrete scenario?,Generic advice only
+Worked examples,Are inputs actions and expected behavior demonstrated?,No executable or checkable example
+Behavioral value,Would the skill alter a real decision compared with the base model?,Platitudes such as write clean code
