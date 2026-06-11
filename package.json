@@ -1,6 +1,6 @@
 {
   "name": "@vaqif14/prompt-builder",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Skill-discovery prompt builder for coding agents. Turns vague tasks into expert prompt text that searches local and ecosystem skills, recommends install/load steps, and tells the next agent which specialist skills to invoke and what evidence to collect. Optimized for Claude Code and its skills ecosystem.",
   "main": "src/index.js",
   "bin": {
@@ -14,7 +14,7 @@
     "validate": "node scripts/validate.js",
     "validate:data": "node scripts/validate-data.js",
     "verify": "npm run validate:data && npm test && npm run eval",
-    "test": "node tests/data-loader.test.js && node tests/contracts.test.js && node tests/agent-cards.test.js && node tests/skill-trust.test.js && node tests/session-store.test.js && node tests/cli.test.js && node tests/solution-flow.test.js && node tests/platform-detector.test.js && node tests/mode-router.test.js && node tests/skill-matcher.test.js && node tests/sanitize.test.js && node tests/codebase-grounding.test.js && node tests/end-to-end.test.js && node tests/stack-cache.test.js && node tests/error-handler.test.js && node tests/token-budget.test.js && node tests/roadmap-data.test.js && node tests/workflow-router.test.js && node tests/context-diet.test.js && node tests/install-profiles.test.js && node tests/quality-rubric.test.js && node tests/skill-discovery.test.js && node tests/skill-suggestions.test.js && node tests/eval-harness.test.js"
+    "test": "node tests/data-loader.test.js && node tests/contracts.test.js && node tests/agent-cards.test.js && node tests/skill-trust.test.js && node tests/session-store.test.js && node tests/cli.test.js && node tests/solution-flow.test.js && node tests/platform-detector.test.js && node tests/mode-router.test.js && node tests/skill-matcher.test.js && node tests/sanitize.test.js && node tests/codebase-grounding.test.js && node tests/end-to-end.test.js && node tests/stack-cache.test.js && node tests/error-handler.test.js && node tests/token-budget.test.js && node tests/roadmap-data.test.js && node tests/workflow-router.test.js && node tests/context-diet.test.js && node tests/install-profiles.test.js && node tests/quality-rubric.test.js && node tests/skill-discovery.test.js && node tests/skill-suggestions.test.js && node tests/eval-harness.test.js && node tests/title.test.js && node tests/title-integration.test.js"
   },
   "keywords": [
     "claude",

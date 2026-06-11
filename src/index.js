@@ -22,6 +22,7 @@ const contextDiet = require('./context-diet');
 const installProfiles = require('./install-profiles');
 const qualityRubric = require('./quality-rubric');
 const skillDiscovery = require('./skill-discovery');
+const title = require('./title');
 const agentCards = require('./agent-cards');
 const skillTrust = require('./skill-trust');
 
@@ -69,6 +70,9 @@ module.exports = {
   buildQualityBar: qualityRubric.buildQualityBar,
   skillDiscovery,
   discoverSkills: skillDiscovery.discoverSkills,
+  title,
+  deriveTitle: title.deriveTitle,
+  deriveSlug: title.deriveSlug,
   agentCards,
   loadAgentCards: agentCards.loadAgentCards,
   skillTrust,

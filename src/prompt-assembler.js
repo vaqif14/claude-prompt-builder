@@ -15,6 +15,7 @@ const { selectWorkflowPattern } = require('./workflow-router');
 const { scoreContextDiet } = require('./context-diet');
 const { getInstallProfile } = require('./install-profiles');
 const { buildQualityBar, assessPromptQuality } = require('./quality-rubric');
+const { deriveTitle, deriveSlug } = require('./title');
 const { loadCsv, loadMarkdown, renderTemplate } = require('./data-loader');
 
 function parseRows(file) {
@@ -953,7 +954,13 @@ function generatePrompt(task, options = {}) {
 
   const preReportText = finalSections.flatMap(s => s.lines).join('\n')
   const qualityRubric = assessPromptQuality(preReportText)
-  const lines = finalSections.flatMap(s => s.lines)
+  // Topic-derived title (T2): a short human header above the first section, in both --full and
+  // --compact. Derived from the task + analysis; neutralized inside deriveTitle so a malicious task
+  // cannot forge its own "═══ … ═══" header (the box chars are stripped before assembly).
+  const promptTitle = deriveTitle(task, { stack, platform: platforms[0] && platforms[0].id, mode });
+  const promptSlug = deriveSlug(promptTitle);
+
+  const lines = [`═══ ${promptTitle} ═══`, '', ...finalSections.flatMap(s => s.lines)]
 
   if (options.contextReport) {
     const report = buildContextReport(promptSections, budget)
@@ -985,6 +992,8 @@ function generatePrompt(task, options = {}) {
       template,
       stack,
       task,
+      title: promptTitle,
+      slug: promptSlug,
       complexity,
       contextSize: promptText.length < 2000 ? 'Small' : promptText.length < 5000 ? 'Medium' : 'Large',
       platforms: platforms.map(p => p.id),

@@ -110,9 +110,12 @@ function createSessionStore(options = {}) {
     const last = events[events.length - 1];
     const outcomeEvent = [...events].reverse().find(event => event.type === 'outcome');
     const generation = [...events].reverse().find(event => event.type === 'generation');
+    const firstTask = first.task || generation && generation.prompt || '';
     return {
       id: first.session_id,
-      task: first.task || generation && generation.prompt || '',
+      task: firstTask,
+      // Old records predate titles — fall back to a first-task excerpt so listing never breaks.
+      title: first.title || (firstTask ? String(firstTask).replace(/\s+/g, ' ').trim().slice(0, 40) : '(untitled)'),
       mode: first.mode || generation && generation.mode || null,
       stack: first.stack || generation && generation.stack || null,
       template: first.template || generation && generation.template || null,
@@ -223,6 +226,7 @@ function createSessionStore(options = {}) {
     const existing = readEvents(sessionId);
     appendEvent(sessionId, existing.length ? 'session_updated' : 'session_created', {
       task: capValue(task),
+      title: metadata.title ? capValue(metadata.title) : null,
       mode: mode || null,
       stack: stack || null,
       template: metadata.template || null,

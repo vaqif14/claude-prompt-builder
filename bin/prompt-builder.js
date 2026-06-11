@@ -2,7 +2,7 @@
 const { generatePrompt, searchData, validatePrompt, listModes, detectPlatformsMixed } = require('../src/index');
 const sessionStore = require('../src/session-store');
 const {
-  createSession, saveTurn, listSessions, resumeSession, recordOutcome,
+  createSession, saveTurn, listSessions, resumeSession, recordOutcome, getSession,
 } = sessionStore;
 const { buildStats, buildFeedbackReport } = require('../src/session-analytics');
 const { categorizeError } = require('../src/error-handler');
@@ -50,6 +50,7 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--json')} "${chalk.yellow('<task>')}"                               ${chalk.gray('# JSON output')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--save')} <file> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Save to file')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--save-draft')} <file> "${chalk.yellow('<task>')}"                 ${chalk.gray('# Explicitly save an unresolved draft')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--save-auto')} "${chalk.yellow('<task>')}"                          ${chalk.gray('# Save to ./<slug>.md (--force to overwrite)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--print-skills-only')} "${chalk.yellow('<task>')}"                 ${chalk.gray('# Output matched skills')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--stack')} <stack> "${chalk.yellow('<task>')}"                       ${chalk.gray('# Override stack detection')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--backend')} "${chalk.yellow('<task>')}"                             ${chalk.gray('# Force backend context')}
@@ -175,6 +176,8 @@ function parseArgs(args) {
     stats: false,
     recordOutcome: null,
     feedbackReport: false,
+    saveAuto: false,
+    force: false,
   };
 
   const taskWords = [];
@@ -196,6 +199,8 @@ function parseArgs(args) {
     else if (arg === '--json') { flags.json = true; }
     else if (arg === '--save') { flags.save = takeValue(arg, i); i++; }
     else if (arg === '--save-draft') { flags.saveDraft = takeValue(arg, i); i++; }
+    else if (arg === '--save-auto') { flags.saveAuto = true; }
+    else if (arg === '--force') { flags.force = true; }
     else if (arg === '--print-skills-only') { flags.printSkillsOnly = true; }
     else if (arg === '--search') { flags.search = takeValue(arg, i); i++; }
     else if (arg === '--validate') { flags.validate = takeValue(arg, i); i++; }
@@ -247,6 +252,8 @@ function parseArgs(args) {
     throw new Error(`Unknown mode: ${flags.mode}`);
   }
   if (flags.save && flags.saveDraft) throw new Error('--save and --save-draft are mutually exclusive');
+  if (flags.saveAuto && (flags.save || flags.saveDraft)) throw new Error('--save-auto cannot be combined with --save/--save-draft');
+  if (flags.force && !flags.saveAuto) throw new Error('--force only applies to --save-auto');
   return { flags, task: taskWords.join(' ') };
 }
 
@@ -326,15 +333,20 @@ async function main() {
 
   // List sessions
   if (flags.listSessions) {
-    console.log(`\n  ${chalk.bold.white('🗄  Recent Sessions')}\n`);
-    const sessions = listSessions();
+    const sessions = listSessions(20);
     if (sessions.length === 0) {
-      console.log(`  ${chalk.gray('No sessions found.')}`);
-    } else {
-      for (const s of sessions) {
-        const date = new Date(s.updated_at).toLocaleString();
-        console.log(`  ${chalk.cyan('•')} ${chalk.yellow(s.id)}  ${chalk.white(s.task.substring(0, 40))}  ${chalk.gray(date)}`);
-      }
+      console.log(`\n  ${chalk.gray('No sessions yet — generate a prompt and one will be recorded here.')}\n`);
+      process.exit(0);
+    }
+    console.log(`\n  ${chalk.bold.white('🗄  Recent Sessions')} ${chalk.gray(`(${sessions.length}, most recent first)`)}\n`);
+    console.log(`  ${chalk.gray('id'.padEnd(24))} ${chalk.gray('title'.padEnd(42))} ${chalk.gray('turns')}  ${chalk.gray('updated')}`);
+    for (const s of sessions) {
+      let turns = 0;
+      try { turns = (getSession(s.id).turns || []).length; } catch (_) { turns = 0; }
+      // Old records have no title → summary already falls back to a first-task excerpt.
+      const title = (s.title || s.task || '(untitled)').replace(/\s+/g, ' ').trim().slice(0, 40);
+      const date = new Date(s.updated_at).toLocaleString();
+      console.log(`  ${chalk.yellow(String(s.id).padEnd(24))} ${chalk.white(title.padEnd(42))} ${chalk.cyan(String(turns).padStart(5))}  ${chalk.gray(date)}`);
     }
     console.log('');
     process.exit(0);
@@ -529,7 +541,7 @@ async function main() {
         result.metadata.mode,
         result.metadata.stack,
         sessionId || undefined,
-        { template: result.metadata.template }
+        { template: result.metadata.template, title: result.metadata.title }
       );
     }
     const sectionNames = [
@@ -580,12 +592,27 @@ async function main() {
   if (flags.json) {
     console.log(JSON.stringify({
       prompt: result.prompt,
+      title: result.metadata.title,
+      slug: result.metadata.slug,
       metadata: result.metadata,
       validation: result.validation,
       skillSuggestions: result.metadata.skillSuggestions || [],
       excludedSkillSuggestions: result.metadata.excludedSkillSuggestions || [],
       discovery: result.metadata.discovery || null,
     }, null, 2));
+    process.exit(0);
+  }
+
+  // --save-auto (T3): write the scaffold to ./<slug>.md, refusing to clobber an existing file
+  // unless --force. No readiness gate — this is the quick "drop it next to me" path.
+  if (flags.saveAuto) {
+    const autoPath = `${result.metadata.slug}.md`;
+    if (fs.existsSync(autoPath) && !flags.force) {
+      console.error(chalk.red(`  ✖ ${autoPath} already exists.`) + chalk.gray(' Pass --force to overwrite.'));
+      process.exit(1);
+    }
+    fs.writeFileSync(autoPath, result.prompt, 'utf-8');
+    console.log(`  ${chalk.green('✓')} Saved to ${chalk.cyan(autoPath)}  ${chalk.gray(`(${result.metadata.title})`)}`);
     process.exit(0);
   }
 
