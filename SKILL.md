@@ -11,11 +11,12 @@ Turn vague user requests into precise, paste-ready orchestration prompts. A prof
 
 Prompt Builder does not *implement* the change (it does not edit files or ship the fix). But it MUST do the understanding: read the target code, diagnose the actual problem, and write the concrete solution direction into the prompt ("the root cause is X at `file:line`; the fix is to change A→B / extract Y / split Z"). It is a *diagnosis-and-prescription* tool, not just a routing manifest — a prompt that only says "go find the problem and figure out the fix" has failed. It then also prepares the orchestration around that solution: which skills to discover/install/call, in what order, with what evidence. For review requests, require evidence first and never let the prompt claim success upfront.
 
-## How It Works: Understand → Clarify → Conclude
+## How It Works: Understand → Clarify → Discover → Diagnose → Conclude
 
 This is the heart of the skill. The user speaks in **plain, natural language** — in any
 language, however casual or vague (`"yoxla bu səhifəni"`, `"bunu düzəlt"`, `"add a timer"`).
-The skill does the work of understanding it **against the real codebase**, not just the words:
+The skill does the work of understanding it **against the real codebase**, not just the words.
+Each gate has a pass condition; a gate with no work to do is omitted (no ceremony):
 
 1. **Understand the request in plain language.** Accept casual, mixed-language, or
    underspecified input. Never demand precise phrasing from the user.
@@ -24,19 +25,26 @@ The skill does the work of understanding it **against the real codebase**, not j
    and the surrounding code. Map the vague intent to concrete `file:line` targets. The CLI
    heuristics (mode, platform, stack, skills) are a starting point — the codebase is the
    source of truth.
-3. **Clarify only when genuinely blocked.** If — *after reading the code* — the target,
-   scope, or intended outcome is still ambiguous in a way that changes what gets built, ask
-   the user **one focused question and wait**. Do not guess on decisions the user owns. If
-   the code already makes the intent clear, proceed without asking.
-4. **Diagnose and write the solution.** This is the step that separates a useful prompt from
+3. **Clarify only when genuinely blocked (CLARIFY-FIRST GATE).** This gate is emitted **only when
+   grounding confidence is low** — the task named no surface and several plausible ones exist. It
+   poses **exactly one** A/B/C question naming the real candidate paths; the agent asks it and
+   **waits**, then records `Resolved target:` and deletes the question. High confidence → the gate
+   is omitted entirely.
+4. **Discover skills (SKILL SUGGESTIONS gate).** Check what is installed vs. what the ecosystem
+   offers (`npx skills find`, best-effort/offline-degrading). Every matched skill is labeled
+   ✓ installed / ⤓ suggested / ? unverified; not-installed best-fits become an install suggestion +
+   rerun (never "load first"). Settle install decisions **before** the diagnosis pass uses them.
+5. **Diagnose and write the solution.** This is the step that separates a useful prompt from
    orchestration ceremony. Open the resolved target file(s) and actually read them. Then fill
    the `PROBLEM ANALYSIS & SOLUTION DIRECTION` section with a concrete, code-grounded diagnosis:
    the root cause at a real `path:line`, why it matters *in this code*, and the specific fix to
    apply ("extract `X` from `file:line`", "split this 700-line god-class into A/B/C", "fix the
    N+1 at `line` with a JOIN FETCH", "change `A` → `B`"). The prompt must carry the *solution
    direction*, not just a map and a "go figure it out".
-5. **Conclude with the prompt.** Once targets are resolved and the diagnosis is written, emit
-   the orchestration prompt (sections below) — never a generic, placeholder prompt.
+6. **Conclude with the prompt.** Once targets are resolved and the diagnosis is written, emit
+   the orchestration prompt (sections below) — never a generic, placeholder prompt. The CLI refuses
+   to `--save` a prompt that still has unfilled `<RESOLVE>` markers (`validation.blockingMarkers`
+   names each with its section + line); use `--save-draft` to override.
 
 **Hard gate (Conclude):** the CLI scaffold is an *intermediate* artifact (its own summary prints
 `Solution: DRAFT` and `Plan: DRAFT` until you fill them). Do NOT hand the prompt back while it is a draft:

@@ -35,6 +35,14 @@ prompt-builder --context-report "refactor api"     # token usage + diet (lean/ok
 prompt-builder --profile web "add a dashboard"      # curated, capped, approval-required skill set
 prompt-builder --profile ai-agent "add a RAG step"  # profiles: web | backend | mobile | ai-agent | hackathon
 
+# Skill discovery (opt-in; offline-degrading) + draft enforcement
+prompt-builder --discover "redesign admin dashboard"   # check installed vs ecosystem; emit SKILL SUGGESTIONS
+prompt-builder --no-discover "add timer"               # offline; static matches labeled "? unverified"
+prompt-builder --refresh-skills --discover "audit api" # ignore the 24h discovery cache
+prompt-builder --dismiss-skill some-skill              # stop suggesting a skill (per project)
+prompt-builder --save out.txt "fix bug"                # REFUSES a draft (unfilled <RESOLVE>); lists markers
+prompt-builder --save-draft out.txt "fix bug"          # write the draft anyway
+
 # Stack profile cache
 prompt-builder --init-stack-profile --stack nextjs
 prompt-builder --refresh-stack-profile "review admin dashboard"

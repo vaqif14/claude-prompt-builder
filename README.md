@@ -76,6 +76,9 @@ prompt-builder --session-id sess_xxx "continue implementation"
 - **Context Diet** — Scores each prompt `lean`/`ok`/`heavy`, flags bloat + missing cache, recommends `--max-tokens`
 - **Quality Bar (dev-metrics aligned)** — Engineered to score 9–10 on the six session-quality dimensions (prompt, context, response, task clarity, verification, tool use); self-reports coverage in `metadata.qualityRubric`
 - **Selective Install Profiles** — `--profile web|backend|mobile|ai-agent|hackathon`: a small, capped, approval-required curated skill set (not a bulk mega-setup)
+- **Skill Discovery & Suggestions** — `--discover` checks installed vs. ecosystem skills (`npx skills find`, offline-degrading); three-state `MATCHED SKILLS` (✓ installed / ⤓ suggested / ? unverified) + an approval-required `SKILL SUGGESTIONS` block with install + rerun. `--dismiss-skill <name>` to silence one
+- **Clarify-First Gate** — on a low-confidence ambiguous task, asks ONE A/B/C question naming the real candidate paths before doing anything
+- **Enforced Readiness** — `--save` refuses a draft prompt with unfilled `<RESOLVE>` markers (`validation.blockingMarkers` pinpoints each); `--save-draft` overrides. Final answer must lead with the solution table `file:line → current → change → why`
 - **Mixed-Platform Lanes** — Auto-creates integration lane when multiple platforms detected
 - **Skill Discovery Preflight** — Scans local skills + ecosystem search + install recommendations
 - **Multi-Agent Task Board** — Task cards with id | owner | skill | title | status | depends_on | artifact

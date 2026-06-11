@@ -4,6 +4,50 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-06-11
+
+Real skill discovery + hardened solution flow. Two connected features: (A) the tool itself now
+checks which skills exist (installed vs ecosystem) and emits approval-required install suggestions;
+(B) the clarify→discover→diagnose→solution flow is enforced, not advisory.
+
+### Added — Feature A (Skill Discovery & Suggestion)
+
+- **`src/skill-discovery.js`** — `discoverSkills(queries, options)`: local scan + ecosystem search via
+  `npx skills find <q> --json` (execFile, no shell; 10s timeout; 1 MB cap; shell-sanitized query).
+  Defensive JSON→plain-text parse; degrades to `status:'unavailable'` with a reason offline. Every
+  registry string is neutralized before it can reach a prompt. Atomic 0600 cache at
+  `.prompt-builder/skill-discovery.json` (query-hash key, 24h TTL via `PROMPT_BUILDER_DISCOVERY_TTL_HOURS`,
+  `--refresh-skills` bypass). Short-circuits on ENOENT/timeout so a no-network run costs ~one timeout.
+- **Three-state `MATCHED SKILLS`** (`classifySkills`): every skill labeled `✓ installed` (with path) /
+  `⤓ suggested (not installed)` / `? unverified` (discovery unavailable). Ordered installed→suggested→
+  unverified; a not-installed skill is never "load first" — its step becomes the install + rerun.
+- **`SKILL SUGGESTIONS` section + console box + `--json` `skillSuggestions[]`** (`buildSkillSuggestions`):
+  ≤3 not-installed, not-dismissed skills ranked by relevance (ecosystem first), each with
+  source, why-it-fits, `npx skills add … -g`, and `/reload-skills` + rerun. Never auto-installed.
+- **CLI flags**: `--discover` / `--no-discover` / `--refresh-skills` / `--dismiss-skill <name>`. Network
+  only on opt-in (flag or stored project preference in `.prompt-builder/config.json`); first run prints a
+  one-line hint. Mutually-exclusive combos rejected (exit 1).
+- **`src/project-config.js`** — per-project `discoverEnabled` + `dismissedSkills`, atomic 0600.
+
+### Added — Feature B (Solution-flow hardening)
+
+- **`CLARIFY-FIRST GATE`** — emitted ONLY when grounding confidence is low and multiple plausible
+  target surfaces exist; poses exactly one A/B/C question naming the real paths, instructs ask-one-and-wait,
+  carries a `Resolved target:` line. Omitted entirely when confidence is high.
+- **Enforcing readiness**: `validatePrompt` gains `blockingMarkers: [{section, line, marker}]` for every
+  unfilled `<RESOLVE>`/placeholder. `--save` refuses a draft prompt (lists the markers); `--save-draft`
+  overrides. `--json` carries `validation.blockingMarkers`.
+- **Solution-table-first output**: OUTPUT SCHEMA requires the final answer to lead with the solution table
+  (`file:line → current → change → why`) for write modes, or the findings ledger for read-only modes.
+- **Gate order** stated in-prompt: clarify → skill suggestions → grounding/diagnosis → solution + task plan.
+
+### Changed
+
+- assembler honors `options.discovery` + `options.dismissedSkills`; metadata gains `discovery`,
+  `skillSuggestions`, `clarify`. `SECTION_PRIORITIES` += `CLARIFY-FIRST GATE` (P0), `SKILL SUGGESTIONS` (P0).
+  CLI `main()` is async. No new runtime dependencies. +37 offline tests (skill-discovery, skill-suggestions,
+  solution-flow); suite 142 → 179.
+
 ## [1.11.0] - 2026-06-11
 
 Quality-rubric aligned. Analyzed the `dev-metrics` plugin — the Claude Code session-quality
