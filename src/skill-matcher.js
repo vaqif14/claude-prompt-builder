@@ -4,7 +4,7 @@
  */
 
 const { selectModel } = require('./model-router');
-const { sanitizeShellArg } = require('./sanitize');
+const { sanitizeShellArg, neutralizeUserText } = require('./sanitize');
 
 // Pick the skill an agent should own by TASK FIT, not by array position. A quality
 // refactor of a Spring backend should bind springboot-patterns / java-code-review, not
@@ -659,6 +659,86 @@ function getDesignerRubric(task) {
   ];
 }
 
+// ── Three-state skill classification (A3) ──────────────────────────────────────────────────
+// Annotate every planned skill with its real availability: installed / suggested / unverified.
+// `discovery` is the merged model from src/skill-discovery.js (or null when discovery did not run).
+function skillNorm(s) {
+  return String(s || '').toLowerCase().replace(/^.*[:/]/, '').replace(/[^a-z0-9]+/g, '');
+}
+
+function classifySkills(skillPlan, discovery) {
+  const { matchInstalledSkills } = require('./stack-cache');
+  const installedSkills = (discovery && discovery.installed) || [];
+  const available = (discovery && discovery.available) || [];
+  const ecoStatus = discovery ? discovery.status : 'not-run';
+  const availByName = new Map(available.map(a => [skillNorm(a.name), a]));
+
+  const { installed: matched } = matchInstalledSkills(skillPlan, installedSkills);
+  const matchBySkill = new Map(matched.map(m => [m.skill, m.match]));
+
+  const order = { installed: 0, suggested: 1, unverified: 2 };
+  const annotated = skillPlan.map(item => {
+    const hit = matchBySkill.get(item.skill);
+    if (hit) return { ...item, statusState: 'installed', path: hit.path, source: 'local scan' };
+
+    // Not installed. If ecosystem discovery actually ran, it is a real suggestion; otherwise we
+    // could not verify it (today's static behavior, now honestly labeled).
+    const eco = availByName.get(skillNorm(item.skill));
+    const statusState = (eco || ecoStatus === 'ok') ? 'suggested' : 'unverified';
+    let instruction = item.instruction;
+    // Invocation-order safety: a not-installed skill must never be "Load this first".
+    if (/load this first/i.test(instruction)) {
+      instruction = `NOT INSTALLED — do not load. First (after user approval): npx skills add ${item.skill} -g, then /reload-skills and rerun. Until then, use find-skills to locate a trusted equivalent.`;
+    }
+    return {
+      ...item,
+      instruction,
+      statusState,
+      source: eco ? `ecosystem search "${eco.query}"` : 'static match',
+    };
+  });
+
+  annotated.sort((a, b) => order[a.statusState] - order[b.statusState]);
+  return annotated;
+}
+
+// ── Skill suggestions (A4) ─────────────────────────────────────────────────────────────────
+// Up to 3 not-installed, not-dismissed skills the user could install to do this task better.
+function buildSkillSuggestions(annotatedPlan, discovery, dismissed = [], task = '') {
+  const dismissedNorm = new Set((dismissed || []).map(skillNorm));
+  const installedNorm = new Set(((discovery && discovery.installed) || []).map(s => skillNorm(s.name)));
+  const available = (discovery && discovery.available) || [];
+  const safeTask = neutralizeUserText(task, 120);
+  const out = [];
+  const seen = new Set();
+
+  const push = (name, source, fits, relevance) => {
+    const key = skillNorm(name);
+    if (!name || seen.has(key) || dismissedNorm.has(key) || installedNorm.has(key)) return;
+    if (key === skillNorm('find-skills')) return; // meta-skill, not an install suggestion
+    seen.add(key);
+    out.push({
+      name,
+      source,
+      fits,
+      install: `npx skills add ${name} -g`,
+      rerun: `prompt-builder "${safeTask}"`,
+      relevance: relevance || 0,
+    });
+  };
+
+  // 1) Ecosystem hits first — real relevance from the registry search.
+  for (const e of available) {
+    push(e.name, `ecosystem search "${e.query}"`, `${e.description || 'matched the ecosystem search'} — surfaced for this task.`, e.relevance);
+  }
+  // 2) Plan skills flagged as suggested (task-analysis matches not installed, not already added).
+  for (const item of annotatedPlan.filter(s => s.statusState === 'suggested')) {
+    push(item.skill, item.source || 'static match', `${item.reason} — needed for this task.`, 0.5);
+  }
+
+  return out.sort((a, b) => b.relevance - a.relevance).slice(0, 3);
+}
+
 module.exports = {
   analyzeTask,
   getSkillInvocationPlan,
@@ -668,4 +748,6 @@ module.exports = {
   getUniversalAgentRoster,
   getMulticaStyleTaskBoard,
   getDesignerRubric,
+  classifySkills,
+  buildSkillSuggestions,
 };

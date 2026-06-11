@@ -158,6 +158,11 @@ function parseArgs(args) {
     maxTokens: 6000,
     contextReport: false,
     profile: null,
+    discover: false,
+    noDiscover: false,
+    refreshSkills: false,
+    dismissSkill: null,
+    saveDraft: null,
   };
 
   const taskWords = [];
@@ -190,6 +195,11 @@ function parseArgs(args) {
     else if (arg === '--max-tokens') { flags.maxTokens = parseInt(args[++i], 10); }
     else if (arg === '--context-report') { flags.contextReport = true; }
     else if (arg === '--profile') { flags.profile = args[++i]; }
+    else if (arg === '--discover') { flags.discover = true; }
+    else if (arg === '--no-discover') { flags.noDiscover = true; }
+    else if (arg === '--refresh-skills') { flags.refreshSkills = true; }
+    else if (arg === '--dismiss-skill') { flags.dismissSkill = args[++i]; }
+    else if (arg === '--save-draft') { flags.saveDraft = args[++i]; }
     else {
       taskWords.push(arg);
     }
@@ -198,13 +208,30 @@ function parseArgs(args) {
   return { flags, task: taskWords.join(' ') };
 }
 
-function main() {
+async function main() {
   const rawArgs = process.argv.slice(2);
   const { flags, task } = parseArgs(rawArgs);
 
   if (flags.help || rawArgs.length === 0) {
     showHelp();
     process.exit(0);
+  }
+
+  // Flag validation: discovery on/off are mutually exclusive.
+  if (flags.discover && flags.noDiscover) {
+    console.error(chalk.red('  ✖ Error: --discover and --no-discover are mutually exclusive'));
+    process.exit(1);
+  }
+
+  const projectConfig = require('../src/project-config');
+  const cwd = process.cwd();
+
+  // --dismiss-skill: record the dismissal so it is never suggested again, then either exit
+  // (if no task) or continue generating with it suppressed.
+  if (flags.dismissSkill) {
+    projectConfig.dismissSkill(cwd, flags.dismissSkill);
+    console.log(`  ${chalk.green('✓')} Dismissed skill ${chalk.cyan(flags.dismissSkill)} — it will no longer be suggested for this project.`);
+    if (!task) process.exit(0);
   }
 
   // Search mode
@@ -328,6 +355,29 @@ function main() {
   if (flags.backend) effectiveTask += ' backend';
   if (flags.database) effectiveTask += ` ${flags.database} database`;
 
+  // ── Skill discovery decision (A2) ──────────────────────────────────────────────────────────
+  // Network is only hit when the user opted in (--discover, or a stored project preference).
+  // Default first run: no network, print a one-line hint. Discovery degrades gracefully on failure.
+  const cfg = projectConfig.readConfig(cwd);
+  if (flags.discover && !cfg.discoverEnabled) projectConfig.setDiscoverEnabled(cwd, true);
+  const wantDiscover = !flags.noDiscover && (flags.discover || cfg.discoverEnabled);
+
+  let discovery = null;
+  if (wantDiscover) {
+    try {
+      const { detectStack, detectPlatformsMixed, analyzeTask, getSkillSearchQueries, discoverSkills } = require('../src/index');
+      const dStack = flags.stack || detectStack(effectiveTask);
+      const dPlatforms = detectPlatformsMixed(effectiveTask);
+      const dDomains = analyzeTask(effectiveTask).domains;
+      const queries = getSkillSearchQueries(effectiveTask, dDomains, dPlatforms, dStack);
+      discovery = await discoverSkills(queries, { cwd, refresh: flags.refreshSkills });
+    } catch (e) {
+      discovery = { status: 'unavailable', reason: `discovery error: ${e.message}`, installed: [], available: [], unavailable: [], fromCache: false };
+    }
+  } else if (!flags.noDiscover && !cfg.discoverEnabled) {
+    console.log(`  ${chalk.gray('Tip: run with --discover to check the skills ecosystem for better-fitting skills.')}`);
+  }
+
   const options = {
     mode: flags.mode,
     template: flags.template,
@@ -341,6 +391,8 @@ function main() {
     full: flags.full,
     contextReport: flags.contextReport,
     profile: flags.profile,
+    discovery,
+    dismissedSkills: cfg.dismissedSkills,
   };
 
   const result = generatePrompt(effectiveTask, options);
@@ -388,6 +440,8 @@ function main() {
       prompt: result.prompt,
       metadata: result.metadata,
       validation: result.validation,
+      skillSuggestions: result.metadata.skillSuggestions || [],
+      discovery: result.metadata.discovery || null,
     }, null, 2));
     process.exit(0);
   }
@@ -419,6 +473,21 @@ function main() {
     chalk.gray(`Stack profile: ${result.metadata.stackProfile ? `${result.metadata.stackProfile.status} ${result.metadata.stackProfile.path}` : 'disabled'}`),
     chalk.gray(`Session: ${sessionPersisted ? sessionId : 'not persisted'}`),
   ], 'green');
+
+  // Skill suggestions box (A4): show "you could do this better with skill X" BEFORE the prompt body.
+  const suggestions = result.metadata.skillSuggestions || [];
+  if (suggestions.length) {
+    const lines = [chalk.gray('Not installed — install only after you approve:')];
+    for (const s of suggestions) {
+      lines.push(`${chalk.cyan('•')} ${chalk.bold.white(s.name)} ${chalk.gray(`(${s.source})`)}`);
+      lines.push(`  ${chalk.gray(s.fits)}`);
+      lines.push(`  ${chalk.green(s.install)}  ${chalk.gray('then /reload-skills + rerun')}`);
+    }
+    lines.push(chalk.gray('Dismiss one with: --dismiss-skill <name>'));
+    box('⤓ Skill Suggestions — approval required', lines, 'cyan');
+  } else if (result.metadata.discovery && result.metadata.discovery.status === 'unavailable') {
+    console.log(`  ${chalk.yellow('⚠')} ${chalk.gray(`Skill discovery unavailable (${result.metadata.discovery.reason}) — using static matches.`)}`);
+  }
 
   // Extract TASK PLAN rows for execution-plan display. The assembler emits spec-kit-style
   // rows (`  [ ] T001 ...` for edit tasks, `  [ ] F001 ...` for findings ledgers), so match
@@ -462,4 +531,7 @@ function main() {
   hr('gray');
 }
 
-main();
+main().catch((e) => {
+  console.error(chalk.red(`  ✖ ${e && e.message ? e.message : e}`));
+  process.exit(1);
+});

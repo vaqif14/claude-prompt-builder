@@ -174,6 +174,8 @@ function generatePrompt(task, options = {}) {
     getAgentCouncil,
     getMulticaStyleTaskBoard,
     getDesignerRubric,
+    classifySkills,
+    buildSkillSuggestions,
   } = require('./skill-matcher');
 
   const mode = inferMode(task, options.mode);
@@ -279,6 +281,13 @@ function generatePrompt(task, options = {}) {
   const taskUnderstanding = inferTaskUnderstanding(task, mode, platforms);
   const skillPlan = getSkillInvocationPlan(task, template, analysis.domains, platforms, complexity, options);
   const skillQueries = getSkillSearchQueries(task, analysis.domains, platforms, stack);
+
+  // Three-state skill classification (A3) + suggestions (A4). `options.discovery` is the merged
+  // model from src/skill-discovery.js (computed by the CLI/caller; null when discovery did not run,
+  // in which case static matches are honestly labeled "unverified").
+  const discovery = options.discovery || null;
+  const annotatedPlan = classifySkills(skillPlan, discovery);
+  const skillSuggestions = buildSkillSuggestions(annotatedPlan, discovery, options.dismissedSkills || [], task);
   const stackProfile = options.stackProfile
     ? ensureStackProfile({
         cwd: options.cwd || process.cwd(),
@@ -527,23 +536,65 @@ function generatePrompt(task, options = {}) {
     })
   }
 
+  const skillStateLabel = (item) => {
+    if (item.statusState === 'installed') {
+      const rel = path.relative(options.cwd || process.cwd(), item.path || '');
+      return `✓ installed (${rel && !rel.startsWith('..') ? rel : (item.path || 'local')})`;
+    }
+    if (item.statusState === 'suggested') return `⤓ suggested (not installed) — source: ${item.source}`;
+    return '? unverified — discovery unavailable; verify via find-skills before relying on it';
+  };
+  const discoveryNote = !discovery
+    ? 'Discovery did not run (offline / --no-discover). Static matches below are labeled "? unverified" — verify availability with find-skills before relying on them.'
+    : discovery.status === 'unavailable'
+      ? `Ecosystem discovery unavailable (${discovery.reason}); local scan still applied. Uncheckable matches are "? unverified".`
+      : `Discovery ran (local scan + ecosystem${discovery.fromCache ? ', cached' : ''}). Statuses below are real.`;
+
   promptSections.push({
     name: 'MATCHED SKILLS',
     lines: [
       '═══════════════════════════════════════════════════════════════',
-      '  MATCHED SKILLS',
+      '  MATCHED SKILLS — ✓ installed · ⤓ suggested (not installed) · ? unverified',
       '═══════════════════════════════════════════════════════════════',
+      '',
+      discoveryNote,
       '',
       ...analysis.domains.map(d => `  • ${d.skill} (${d.domain}) — ${d.priority} priority`),
       '',
-      'Required Skills To Invoke (in this order):',
-      ...skillPlan.map((item, index) => `  ${index + 1}. ${item.skill} — ${item.reason}. ${item.instruction}`),
+      'Required Skills To Invoke (installed first, then suggested, then unverified):',
+      ...annotatedPlan.map((item, index) => [
+        `  ${index + 1}. [${item.statusState}] ${item.skill} — ${skillStateLabel(item)}`,
+        `       ${item.reason}. ${item.instruction}`,
+      ].join('\n')),
       '',
-      'Rule: Do not continue with the audit/build until each relevant skill above has been invoked, marked unavailable with a reason, or marked N/A (not applicable to this task\'s scope) — invoke only what the task actually needs.',
+      'Rule: a not-installed skill is NEVER "load first" — if the best-fit skill is not installed, the first step is the install suggestion + rerun (see SKILL SUGGESTIONS), not a load.',
+      'Rule: Do not continue until each relevant skill above has been invoked, marked unavailable with a reason, or marked N/A (not applicable to this task\'s scope) — invoke only what the task actually needs.',
       'Rule: Do not claim a skill was used unless its guidance was actually loaded/read or its workflow was followed.',
       '',
     ],
   })
+
+  if (skillSuggestions.length) {
+    promptSections.push({
+      name: 'SKILL SUGGESTIONS',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        '  SKILL SUGGESTIONS — approval required (never auto-installed)',
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        'You can execute this request more effectively with the skills below. Each is NOT installed.',
+        'Installing is a suggestion only — run the install command ONLY after the user approves.',
+        '',
+        ...skillSuggestions.flatMap(s => [
+          `  • Skill: ${s.name}            (source: ${s.source})`,
+          `    Fits because: ${s.fits}`,
+          `    Install: ${s.install}        ← run only after user approves`,
+          `    Then: /reload-skills and rerun: ${s.rerun}`,
+          '',
+        ]),
+      ],
+    })
+  }
 
   promptSections.push({
     name: 'MULTI-AGENT TASK BOARD',
@@ -867,6 +918,8 @@ function generatePrompt(task, options = {}) {
         warnings: contextDiet.warnings,
       },
       installProfile: installProfile ? installProfile.label : null,
+      discovery: discovery ? { status: discovery.status, reason: discovery.reason || null, fromCache: Boolean(discovery.fromCache), installed: discovery.installed.length, available: discovery.available.length } : null,
+      skillSuggestions,
       qualityRubric: {
         covered: qualityRubric.covered,
         total: qualityRubric.total,

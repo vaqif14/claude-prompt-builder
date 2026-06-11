@@ -173,11 +173,20 @@ async function discoverSkills(queries, options = {}) {
         if (!prev || e.relevance > prev.relevance) availableMap.set(k, { ...e, status: 'available' });
       }
     } catch (err) {
-      const reason = err && err.killed ? `timeout after ${timeoutMs}ms`
-        : err && err.code === 'ENOENT' ? 'npx/skills CLI not found'
+      const isEnoent = err && err.code === 'ENOENT';
+      const isTimeout = err && err.killed;
+      const reason = isTimeout ? `timeout after ${timeoutMs}ms`
+        : isEnoent ? 'npx/skills CLI not found'
           : `find failed: ${neutralizeUserText(String(err && err.message || err), 120)}`;
       unavailable.push({ query, reason });
       lastReason = reason;
+      // Short-circuit: if the very first attempt fails because the CLI is missing or unreachable
+      // (ENOENT / timeout) and nothing has succeeded yet, the rest will fail the same way — stop
+      // so a no-network run costs ~one timeout, not one per query.
+      if (!anyOk && (isEnoent || isTimeout)) {
+        for (const q of qlist.slice(qlist.indexOf(query) + 1)) unavailable.push({ query: q, reason: 'skipped — discovery already unavailable' });
+        break;
+      }
     }
   }
 
