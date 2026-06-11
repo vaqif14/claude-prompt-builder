@@ -161,4 +161,42 @@ test('a filled prompt (real path:line, no <RESOLVE>) reports solutionReadiness=r
     `expected ready after fill, got ${v.solutionReadiness}`);
 });
 
+// v1.10.0 — every prompt carries a workflow pattern and a verification-first contract
+test('every prompt names a workflow pattern (section + metadata)', () => {
+  for (const tc of TEST_CASES) {
+    const result = generatePrompt(tc.task, tc.options || {});
+    assert(/WORKFLOW PATTERN/.test(result.prompt), `${tc.task}: missing WORKFLOW PATTERN section`);
+    assert(result.metadata.workflowPattern, `${tc.task}: missing workflowPattern metadata`);
+  }
+});
+
+test('every prompt carries a verification-first contract', () => {
+  for (const tc of TEST_CASES) {
+    const result = generatePrompt(tc.task, tc.options || {});
+    assert(/VERIFICATION CONTRACT/.test(result.prompt), `${tc.task}: missing VERIFICATION CONTRACT`);
+    assert(/Provable by command/.test(result.prompt), `${tc.task}: contract missing proof-by-command`);
+  }
+});
+
+test('audit verdict rule forbids optimistic "Working" without proof', () => {
+  const p = generatePrompt('audit the dashboard and confirm all working', {}).prompt;
+  assert(/do NOT output "Working"/.test(p), 'audit must gate the Working verdict on proof');
+});
+
+test('every prompt reports a context-diet grade in metadata', () => {
+  const r = generatePrompt('review admin dashboard and confirm all working', {});
+  assert(['lean', 'ok', 'heavy'].includes(r.metadata.contextDiet.grade), 'diet grade present');
+  assert(r.metadata.contextDiet.estTokens > 0, 'diet token estimate present');
+});
+
+test('--profile injects a capped, approval-required SELECTIVE INSTALL PROFILE', () => {
+  const r = generatePrompt('add a countdown timer', { profile: 'web' });
+  assert(/SELECTIVE INSTALL PROFILE/.test(r.prompt), 'profile section present');
+  assert(/approval-required/i.test(r.prompt), 'profile must state approval-required');
+  assert.strictEqual(r.metadata.installProfile, 'Web / Frontend');
+  // no profile flag → no section
+  const none = generatePrompt('add a countdown timer', {});
+  assert(!/SELECTIVE INSTALL PROFILE/.test(none.prompt), 'no profile section without --profile');
+});
+
 console.log('');

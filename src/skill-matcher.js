@@ -315,45 +315,97 @@ function getSkillDiscoveryProtocol(task, domains, platforms = [], stack = '', st
   ];
 }
 
-function getAgentCouncil(task, mode, complexity, options, surface = {}) {
+// Specialist code reviewers keyed by detected platform id. This is the expert coverage that
+// the LIVE council (getAgentCouncil) emits — so a mobile, devops, data, or any-backend task gets
+// the RIGHT reviewer instead of a web-biased "Frontend Code Reviewer". (getUniversalAgentRoster
+// had this coverage but was never wired into the prompt; this folds it into the live council.)
+// Each entry: [name, mission, output].
+const PLATFORM_REVIEWERS = {
+  web: ['Frontend/Web Code Reviewer', 'Trace routes, components, hooks, API calls, i18n keys, and client/server state boundaries.', 'File:line findings, broken assumptions, missing UI states, risky code paths, and scoped fix plan.'],
+  backend: ['Backend/Service Code Reviewer', 'Trace controllers, services, repositories, transaction boundaries, error/exception handling, and public contracts.', 'File:line findings, invariant/concurrency/transaction risks, contract risks, and scoped fix plan.'],
+  'node-express': ['Node/Express Reviewer', 'Trace routes, middleware chain, services, and async error handling.', 'File:line findings, middleware/contract risks, and scoped fix plan.'],
+  nestjs: ['NestJS Reviewer', 'Trace modules, controllers, providers, the DI graph, and decorators.', 'File:line findings, DI/module-boundary risks, and scoped fix plan.'],
+  'python-fastapi': ['FastAPI Reviewer', 'Trace async handlers, Pydantic models, dependency injection, and migrations.', 'File:line findings, async/validation risks, and scoped fix plan.'],
+  'python-django': ['Django Reviewer', 'Trace MVT structure, DRF serializers, ORM queries, and migrations.', 'File:line findings, ORM/migration risks, and scoped fix plan.'],
+  python: ['Python Reviewer', 'Trace app structure, handlers, ORM models, and type hints.', 'File:line findings, typing/test gaps, and scoped fix plan.'],
+  'ruby-rails': ['Rails Reviewer', 'Trace MVC, Active Record, callbacks, and migrations.', 'File:line findings, callback/migration risks, and scoped fix plan.'],
+  go: ['Go Reviewer', 'Trace handler layers, storage, and goroutine/error handling.', 'File:line findings, concurrency/error risks, and scoped fix plan.'],
+  rust: ['Rust Reviewer', 'Trace crate structure, ownership, async runtime, and error handling.', 'File:line findings, safety/borrow risks, and scoped fix plan.'],
+  dotnet: ['.NET Reviewer', 'Trace controllers/services, EF Core, and async patterns.', 'File:line findings, EF/async risks, and scoped fix plan.'],
+  laravel: ['Laravel/PHP Reviewer', 'Trace routes, controllers, Eloquent models, and Blade views.', 'File:line findings, Eloquent/validation risks, and scoped fix plan.'],
+  ios: ['iOS/Swift Reviewer', 'Trace the SwiftUI/UIKit hierarchy, view models, navigation, and Xcode build.', 'File:line findings, retain-cycle/main-thread/state risks, and scoped fix plan.'],
+  android: ['Android/Kotlin Reviewer', 'Trace Compose/Activity structure, view models, coroutines, and Gradle build.', 'File:line findings, lifecycle/coroutine/state risks, and scoped fix plan.'],
+  flutter: ['Flutter/Dart Reviewer', 'Trace the widget tree, state management, and platform channels.', 'File:line findings, rebuild/state/async risks, and scoped fix plan.'],
+  'react-native': ['React Native Reviewer', 'Trace RN/Expo screens, navigation, native modules, and platform differences.', 'File:line findings, bridge/platform-parity risks, and scoped fix plan.'],
+  desktop: ['Desktop App Reviewer', 'Trace window/shell states, IPC, native integrations, and packaging.', 'File:line findings, IPC/packaging risks, and scoped fix plan.'],
+  cli: ['CLI/Tooling Reviewer', 'Trace commands, flags, exit codes, and I/O handling.', 'Flag/exit-code/edge-case findings and scoped fix plan.'],
+  devops: ['DevOps/Release Reviewer', 'Review the build/deploy pipeline, env config, secrets, rollback, and observability.', 'Pipeline map, env/secret risks, rollback plan, monitoring gaps, release checklist.'],
+  ai: ['AI/LLM Reviewer', 'Review model calls, prompt/data flow, evals, persistence, safety, and cost.', 'AI flow map, eval cases, prompt-injection/safety risks, and cost report.'],
+  'data-ml': ['Data/ML Reviewer', 'Review pipelines, model versioning, evals, and reproducibility.', 'Data-flow map, metric evidence, reproducibility/leakage risks.'],
+  db: ['Database Reviewer', 'Review schema, migrations, query plans, and indexing.', 'ER map, slow-query analysis, index recommendations, migration risk.'],
+};
+const MOBILE_IDS = new Set(['ios', 'android', 'flutter', 'react-native']);
+
+// `platforms` (the detectPlatformsMixed output) makes the council platform-aware: one specialist
+// reviewer per detected platform, plus the right runtime-QA agent (simulator/emulator for
+// native-mobile-only surfaces, browser for web). When no platforms are passed it falls back to
+// the surface-based web/backend default, so callers that omit it keep working.
+function getAgentCouncil(task, mode, complexity, options, surface = {}, platforms = []) {
   const { isUi = true, isService = false } = surface;
   const lower = task.toLowerCase();
   const agents = [];
-  const add = (name, mission, output) => agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
+  const add = (name, mission, output) => {
+    if (agents.some(a => a.name === name)) return;
+    agents.push({ name, mission, output, model: selectModel(task, complexity, options) });
+  };
 
+  const ids = new Set((platforms || []).map(p => p.id).filter(Boolean));
+  const isNativeMobile = [...ids].some(id => MOBILE_IDS.has(id));
+  const hasWeb = ids.has('web');
+
+  // Designer passes apply to any visual surface (web OR mobile). Enterprise UI Architect is
+  // web/admin-specific — do not put it on a pure native-mobile task.
   if (/\b(?:design|ui|ux|dashboard|pages?|screen|visual|layout)\b/.test(lower)) {
     add(
       'Lead Product Designer',
       'Judge whether the screen feels professional, coherent, and useful at first glance.',
       'Visual hierarchy, spacing rhythm, typography, density, contrast, empty/loading/error state quality, and top 5 design fixes.'
     );
-    add(
-      'Enterprise UI Architect',
-      'Check admin/dashboard composition against established enterprise UI patterns.',
-      'Layout map, widget priority, card/table/chart quality, token usage, and component-system violations.'
-    );
+    if (hasWeb || ids.size === 0 || /\b(?:admin|dashboard|mui|enterprise)\b/.test(lower)) {
+      add(
+        'Enterprise UI Architect',
+        'Check admin/dashboard composition against established enterprise UI patterns.',
+        'Layout map, widget priority, card/table/chart quality, token usage, and component-system violations.'
+      );
+    }
   }
 
-  if (isService && !isUi) {
-    add(
-      'Backend/Service Code Reviewer',
-      'Trace actual files, services, repositories, transaction boundaries, error/exception handling, and public contracts.',
-      'File:line findings, broken assumptions, invariant/concurrency/transaction risks, risky code paths, and scoped fix plan.'
-    );
-  } else {
-    add(
-      'Frontend Code Reviewer',
-      'Trace actual files, hooks, API calls, i18n keys, and state boundaries.',
-      'File:line findings, broken assumptions, missing states, risky code paths, and scoped fix plan.'
-    );
+  // Primary code reviewers: one specialist per detected platform; fall back to the surface
+  // default when no platform was detected.
+  let addedPlatformReviewer = false;
+  for (const id of ids) {
+    const r = PLATFORM_REVIEWERS[id];
+    if (r) { add(...r); addedPlatformReviewer = true; }
+  }
+  if (!addedPlatformReviewer) {
+    add(...(isService && !isUi ? PLATFORM_REVIEWERS.backend : PLATFORM_REVIEWERS.web));
   }
 
+  // Runtime QA: simulator/emulator for native-mobile-only surfaces, browser otherwise.
   if (mode === 'audit' || /\b(?:review|audit|verify|confirm|working|qa)\b/.test(lower)) {
-    add(
-      'Browser QA Engineer',
-      'Prove runtime behavior with browser evidence.',
-      'URLs, viewports, screenshots, console errors, failed requests, responsive overflow, and interaction results.'
-    );
+    if (isNativeMobile && !hasWeb) {
+      add(
+        'Device/Simulator QA Engineer',
+        'Prove runtime behavior on a simulator/emulator or real device.',
+        'Device/OS matrix, screenshots, logs/logcat, crash/ANR checks, and interaction results.'
+      );
+    } else {
+      add(
+        'Browser QA Engineer',
+        'Prove runtime behavior with browser evidence.',
+        'URLs, viewports, screenshots, console errors, failed requests, responsive overflow, and interaction results.'
+      );
+    }
     add(
       'Verification Engineer',
       'Run static gates and summarize pass/fail truthfully.',
@@ -361,6 +413,7 @@ function getAgentCouncil(task, mode, complexity, options, surface = {}) {
     );
   }
 
+  // Cross-cutting specialists (demand-driven; deduped by name against the platform reviewers).
   if (mode === 'security-review' || /\b(?:security|auth|jwt|xss|csrf)\b/.test(lower)) {
     add(
       'Security Auditor',
@@ -368,7 +421,6 @@ function getAgentCouncil(task, mode, complexity, options, surface = {}) {
       'Risk findings with CWE reference, reproduction steps, and fix priority.'
     );
   }
-
   if (mode === 'performance-review' || /\b(?:performance|slow|optimize|lag)\b/.test(lower)) {
     add(
       'Performance Engineer',
@@ -376,7 +428,6 @@ function getAgentCouncil(task, mode, complexity, options, surface = {}) {
       'Baseline metrics, profiler evidence, optimization recommendation, post-fix measurements.'
     );
   }
-
   if (mode === 'architecture-review' || /\b(?:architecture|hexagonal|clean|domain)\b/.test(lower)) {
     add(
       'System Architect',
@@ -384,23 +435,9 @@ function getAgentCouncil(task, mode, complexity, options, surface = {}) {
       'Architecture map, coupling issues, dependency violations, restructure recommendation.'
     );
   }
-
-  if (/\b(?:backend|api|server|controller|service|repository|endpoint)\b/.test(lower)) {
-    add(
-      'Backend/API Architect',
-      'Review endpoint design, service boundaries, data flow, and contract consistency.',
-      'API map, endpoint contracts, service layer findings, database query issues, and refactoring plan.'
-    );
-  }
-
   if (/\b(?:database|db|migrations?|schema|sql|postgres|mongo(?:db)?|redis|prisma|typeorm|jpa)\b/.test(lower)) {
-    add(
-      'Database/Migration Agent',
-      'Review schema design, query performance, indexing, and migration safety.',
-      'ER map, slow query analysis, index recommendations, migration risk assessment.'
-    );
+    add(...PLATFORM_REVIEWERS.db);
   }
-
   if (/\b(?:microservices?|grpc|kafka|rabbitmq|events?|integration|webhook)\b/.test(lower)) {
     add(
       'Integration/Test Agent',
@@ -408,13 +445,8 @@ function getAgentCouncil(task, mode, complexity, options, surface = {}) {
       'Integration map, contract compatibility, event flow diagram, test gap analysis.'
     );
   }
-
   if (/\b(?:devops|deploy|ci|cd|pipeline|docker|kubernetes|infra)\b/.test(lower)) {
-    add(
-      'DevOps/Release Agent',
-      'Review deployment pipeline, env config, rollback, and observability.',
-      'Pipeline map, env risk, rollback plan, monitoring gaps, release checklist.'
-    );
+    add(...PLATFORM_REVIEWERS.devops);
   }
 
   return agents;

@@ -57,7 +57,8 @@ ${chalk.bold('Usage:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--list-sessions')}                                   ${chalk.gray('# Show recent sessions')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--max-tokens')} <n> "${chalk.yellow('<task>')}"                      ${chalk.gray('# Set token budget (default: 6000)')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--full')} "${chalk.yellow('<task>')}"                                ${chalk.gray('# Disable token compression')}
-  ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage breakdown')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--context-report')} "${chalk.yellow('<task>')}"                       ${chalk.gray('# Print token usage + context-diet breakdown')}
+  ${chalk.green('prompt-builder')} ${chalk.cyan('--profile')} <web|backend|mobile|ai-agent|hackathon> "${chalk.yellow('<task>')}" ${chalk.gray('# Curated, capped install profile')}
 
 ${chalk.bold('Modes:')}
   ${chalk.yellow('feature')}            ${chalk.gray('Feature implementation (default)')}
@@ -70,6 +71,10 @@ ${chalk.bold('Modes:')}
   ${chalk.yellow('performance-review')} ${chalk.gray('Performance and profiling audit')}
   ${chalk.yellow('release-check')}      ${chalk.gray('Release readiness verification')}
   ${chalk.yellow('prd-to-tasks')}       ${chalk.gray('PRD decomposition into tasks')}
+  ${chalk.yellow('hackathon')}          ${chalk.gray('Domain-first narrow MVP + demo proof')}
+  ${chalk.yellow('agent-readiness')}    ${chalk.gray('.claude portfolio audit (skills/hooks/MCP)')}
+  ${chalk.yellow('tooling-review')}     ${chalk.gray('MCP/CLI tool & auth readiness audit')}
+  ${chalk.yellow('skill-review')}       ${chalk.gray('Agent-skill quality / bloat review')}
 
 ${chalk.bold('Other Commands:')}
   ${chalk.green('prompt-builder')} ${chalk.cyan('--search')} <query>           ${chalk.gray('# Search data catalog')}
@@ -99,10 +104,14 @@ function printMetadataCard(meta, validation) {
     chalk.white('Field').padEnd(16) + ' │ ' + chalk.white('Value'),
     '─'.repeat(16) + '─┼─' + '─'.repeat(36),
     chalk.gray('Mode').padEnd(16) + ' │ ' + chalk.white(meta.mode),
+    chalk.gray('Workflow').padEnd(16) + ' │ ' + chalk.white(meta.workflowPattern || 'single-pass'),
     chalk.gray('Stack').padEnd(16) + ' │ ' + chalk.white(meta.stack),
     chalk.gray('Platforms').padEnd(16) + ' │ ' + chalk.white(meta.platforms?.join(', ') || 'general'),
     chalk.gray('Complexity').padEnd(16) + ' │ ' + chalk.yellow(meta.complexity),
     chalk.gray('Context Size').padEnd(16) + ' │ ' + chalk.yellow(meta.contextSize),
+    chalk.gray('Context Diet').padEnd(16) + ' │ ' + (meta.contextDiet
+      ? (meta.contextDiet.grade === 'heavy' ? chalk.red : meta.contextDiet.grade === 'ok' ? chalk.yellow : chalk.green)(`${meta.contextDiet.grade.toUpperCase()} (~${meta.contextDiet.estTokens}t)`)
+      : chalk.gray('n/a')),
     chalk.gray('Scaffold').padEnd(16) + ' │ ' + scoreColor(`${validation.score}/100`),
     chalk.gray('Solution').padEnd(16) + ' │ ' + (validation.solutionReadiness === 'ready'
       ? chalk.green('READY')
@@ -145,6 +154,7 @@ function parseArgs(args) {
     help: false,
     maxTokens: 6000,
     contextReport: false,
+    profile: null,
   };
 
   const taskWords = [];
@@ -176,6 +186,7 @@ function parseArgs(args) {
     else if (arg === '--list-sessions') { flags.listSessions = true; }
     else if (arg === '--max-tokens') { flags.maxTokens = parseInt(args[++i], 10); }
     else if (arg === '--context-report') { flags.contextReport = true; }
+    else if (arg === '--profile') { flags.profile = args[++i]; }
     else {
       taskWords.push(arg);
     }
@@ -326,6 +337,7 @@ function main() {
     maxTokens: flags.maxTokens,
     full: flags.full,
     contextReport: flags.contextReport,
+    profile: flags.profile,
   };
 
   const result = generatePrompt(effectiveTask, options);
@@ -405,16 +417,13 @@ function main() {
     chalk.gray(`Session: ${sessionPersisted ? sessionId : 'not persisted'}`),
   ], 'green');
 
-  // Extract sub-tasks for execution plan display
-  const promptLines = result.prompt.split('\n');
-  let inSubTasks = false;
+  // Extract TASK PLAN rows for execution-plan display. The assembler emits spec-kit-style
+  // rows (`  [ ] T001 ...` for edit tasks, `  [ ] F001 ...` for findings ledgers), so match
+  // those instead of the obsolete `Sub-tasks:`/`- [ ]` shape.
   const taskNames = [];
-  for (const line of promptLines) {
-    if (line.trim() === 'Sub-tasks:') { inSubTasks = true; continue; }
-    if (line.trim() === '') { inSubTasks = false; continue; }
-    if (inSubTasks && line.trim().startsWith('- [ ]')) {
-      taskNames.push(line.replace('- [ ]', '').trim());
-    }
+  for (const line of result.prompt.split('\n')) {
+    const m = line.match(/^\s*\[ \]\s+([TF]\d{2,3}\b.*)$/);
+    if (m) taskNames.push(m[1].trim());
   }
   if (taskNames.length > 0) {
     printTaskList(taskNames, 0);

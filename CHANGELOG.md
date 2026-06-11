@@ -4,6 +4,54 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-06-11
+
+Agentic OS. The scaffold and diagnostic center were strong (1.8–1.9), but the prompt still told
+the next agent only *which skills to load* — never *which agent workflow shape to run*, and let
+claims stand without naming the proof behind them. This release lands the roadmap's "next
+professional jump": source-backed workflow selection, a verification-first contract, a context
+diet, four new audit/build modes, and capped selective-install profiles. Translated from Anthropic
+agent-engineering guidance, not invented.
+
+### Added
+
+- **`WORKFLOW PATTERN` section + `workflowPattern` metadata** (P0). Every prompt now names the
+  composable agent shape to run — `single-pass`, `prompt-chain`, `routing`, `parallel-review`,
+  `orchestrator-workers`, `evaluator-optimizer`, or `autonomous-loop` — with a one-line shape and a
+  rationale. Selection is derived from mode/complexity/surface-count/council-size: read-only reviews →
+  `parallel-review`, bugfix → `evaluator-optimizer`, refactor → `prompt-chain`, multi-surface/high
+  complexity → `orchestrator-workers`, and only explicit "autonomous/loop" intent → `autonomous-loop`
+  (simple/composable before autonomous, per Anthropic "Building Effective Agents"). New
+  `src/workflow-router.js` + tests.
+- **`VERIFICATION CONTRACT` section** (P0). Splits every claim by the proof that backs it —
+  provable-by-source / provable-by-command / provable-by-browser-device / blocked-by — and makes
+  "Blocked" a first-class outcome. Mode-aware: read-only modes get a verdict rule ("do NOT output
+  Working unless the matching proof is attached"); write modes get a done rule ("compiling is not
+  proof"). Scored by the validator (5 pts).
+- **Context Diet** (P0). New `src/context-diet.js` scores the full prompt for context pressure
+  (`lean`/`ok`/`heavy`), counts tool/skill/agent sections, flags oversized sections and missing
+  stack-profile caching, and recommends a `--max-tokens`. Surfaced in `metadata.contextDiet`, the
+  `--context-report` output, and the CLI metadata card. + tests.
+- **Four new modes** (P1): `hackathon` (domain-first narrow MVP + demo proof),
+  `agent-readiness` (read-only `.claude` portfolio audit — CLAUDE.md/skills/agents/hooks/MCP/
+  verification), `tooling-review` (MCP/CLI tool & auth/sandbox readiness, overlap resolution), and
+  `skill-review` (agent-skill quality/bloat against Anthropic skill best-practices). The three review
+  modes are read-only; all carry full subTasks/acceptance/toolPermissions/outputSchema. + tests.
+- **Selective install profiles** (P2): `--profile <web|backend|mobile|ai-agent|hackathon>` emits a
+  `SELECTIVE INSTALL PROFILE` section — a small, capped (≤6), approval-required curated skill set for
+  the project shape, each item with a reason. Explicitly *not* a bulk mega-setup. New
+  `src/install-profiles.js` + tests.
+
+### Changed
+
+- `inferMode` ordering puts the specific new review modes (`skill-review`, `agent-readiness`,
+  `tooling-review`) and `hackathon` before the broad `audit`/`feature` so their keywords are not
+  swallowed.
+- `SECTION_PRIORITIES` gains `WORKFLOW PATTERN` (P1), `VERIFICATION CONTRACT` (P0, always kept), and
+  `SELECTIVE INSTALL PROFILE` (P2). Read-only set extended with the three new review modes.
+- Validator gains two checks (workflow pattern present; verification-first contract present) — total
+  35 regression tests added across new + end-to-end suites (114 → 149).
+
 ## [1.9.0] - 2026-06-06
 
 Spec-kit-grade detail. Inspired by GitHub's spec-kit (Spec-Driven Development): the user wanted

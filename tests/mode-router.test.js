@@ -130,4 +130,25 @@ test('inferMode guard: "fix the failing payment bug" stays bugfix', () => {
   assert.strictEqual(inferMode('fix the failing payment bug'), 'bugfix');
 });
 
+// v1.10.0 new modes
+test('inferMode detects hackathon from "mvp"/"demo"/"hackathon"', () => {
+  assert.strictEqual(inferMode('build an mvp for the hackathon demo'), 'hackathon');
+});
+
+test('inferMode detects agent-readiness from ".claude" / "CLAUDE.md"', () => {
+  assert.strictEqual(inferMode('audit our .claude setup and CLAUDE.md'), 'agent-readiness');
+});
+
+test('inferMode detects tooling-review from "mcp readiness" / "tool overload"', () => {
+  assert.strictEqual(inferMode('check our mcp readiness and tool overload'), 'tooling-review');
+});
+
+test('inferMode detects skill-review from "review this skill"', () => {
+  assert.strictEqual(inferMode('review this skill for bloat'), 'skill-review');
+});
+
+test('inferMode ordering: "skill review" is skill-review, not audit', () => {
+  assert.strictEqual(inferMode('skill review'), 'skill-review');
+});
+
 console.log('');

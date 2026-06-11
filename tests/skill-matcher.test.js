@@ -77,6 +77,33 @@ test('getAgentCouncil guard: "verify all working" includes Browser QA Engineer',
   assert(councilRoles('verify all working').includes('Browser QA Engineer'));
 });
 
+// Platform-aware council: a native-mobile task must get a mobile reviewer + simulator QA,
+// NOT a web "Frontend/Web Code Reviewer" or "Browser QA Engineer".
+const platformCouncilRoles = (task, mode = 'audit') =>
+  getAgentCouncil(task, mode, 'Medium', {}, { isUi: true }, detectPlatformsMixed(task)).map((a) => a.name);
+
+test('getAgentCouncil: SwiftUI audit gets iOS/Swift Reviewer + Device/Simulator QA, not browser', () => {
+  const roles = platformCouncilRoles('review the swiftui login screen and confirm all working');
+  assert(roles.includes('iOS/Swift Reviewer'), `missing iOS reviewer; got: ${roles.join(', ')}`);
+  assert(roles.includes('Device/Simulator QA Engineer'), `missing simulator QA; got: ${roles.join(', ')}`);
+  assert(!roles.includes('Browser QA Engineer'), 'native mobile must not use Browser QA');
+  assert(!roles.includes('Frontend/Web Code Reviewer'), 'native mobile must not use the web reviewer');
+});
+
+test('getAgentCouncil: Android audit gets Android/Kotlin Reviewer', () => {
+  assert(platformCouncilRoles('audit the android jetpack compose screen').includes('Android/Kotlin Reviewer'));
+});
+
+test('getAgentCouncil: devops task gets DevOps/Release Reviewer', () => {
+  assert(platformCouncilRoles('review the docker deploy pipeline').includes('DevOps/Release Reviewer'));
+});
+
+test('getAgentCouncil: web audit still gets Browser QA Engineer (not simulator)', () => {
+  const roles = platformCouncilRoles('audit the nextjs dashboard and confirm all working');
+  assert(roles.includes('Browser QA Engineer'), `web should keep Browser QA; got: ${roles.join(', ')}`);
+  assert(!roles.includes('Device/Simulator QA Engineer'), 'web must not use simulator QA');
+});
+
 // Agent -> skill binding: every agent card/roster entry owns a specific skill
 test('task board binds a skill to every card; backend card gets a backend skill', () => {
   const platforms = detectPlatformsMixed('spring boot backend api service');

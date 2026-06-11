@@ -1,5 +1,14 @@
 # Prompt Builder 1.6.0 Roadmap
 
+> **Status (1.10.0, 2026-06-11):** the "next professional jump" P0s have shipped —
+> **Agentic Workflow Router** (`src/workflow-router.js`), **Verification-First Contract**
+> (assembler `VERIFICATION CONTRACT` + validator), and **Context Diet Score**
+> (`src/context-diet.js`, `--context-report`, `metadata.contextDiet`). P1 landed:
+> **Hackathon Mode**, **`.claude` Portfolio Audit** (`agent-readiness` mode),
+> **Tool/MCP Readiness** (`tooling-review` mode), **Skill Bloat Detector** (`skill-review` mode).
+> P2 **Selective Install Profiles** shipped as `--profile`. Still open: P2 **Eval Harness V2**
+> (scenario scoring with 20 real-prompt fixtures).
+
 Research date: 2026-06-05
 
 This roadmap converts Anthropic Claude Code guidance, Anthropic agent-engineering guidance, and current X/Twitter ecosystem signals into implementation-ready features for the next major Prompt Builder release.

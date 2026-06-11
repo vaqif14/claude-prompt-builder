@@ -73,6 +73,18 @@ function validatePrompt(promptText) {
   const hasTaskRows = /\b[TF]\d{2,3}\b/.test(p) && /acceptance:|evidence:|depends_on:/i.test(p);
   checks.push({ pass: hasTaskPlan && hasTaskRows, label: 'Detailed task plan (IDs + acceptance + dependencies) present', points: 6 });
 
+  // 7d. Workflow pattern (4 pts): the prompt must name the composable agent shape to run, not
+  // only which skills to load (Anthropic "Building Effective Agents").
+  const hasWorkflowPattern = /WORKFLOW PATTERN/i.test(p) &&
+    /single-pass|prompt-chain|routing|parallel-review|orchestrator-workers|evaluator-optimizer|autonomous-loop/i.test(p);
+  checks.push({ pass: hasWorkflowPattern, label: 'Workflow pattern selected (composable shape)', points: 4 });
+
+  // 7e. Verification-first contract (5 pts): claims must be split by the proof that backs them,
+  // with blockers named — "if you cannot prove it, do not claim it".
+  const hasVerificationContract = /VERIFICATION CONTRACT/i.test(p) &&
+    /Provable by source|Provable by command|Blocked-by/i.test(p);
+  checks.push({ pass: hasVerificationContract, label: 'Verification-first contract present', points: 5 });
+
   // 8. Prompt Length (8 pts)
   const tokens = Math.ceil(p.length / 4);
   const lengthOk = tokens > 200 && tokens < 6800;
@@ -111,8 +123,19 @@ function validatePrompt(promptText) {
   // ANALYSIS is a DRAFT, not a finished prompt — surfacing this stops the score from reading
   // as "done". 'ready' requires the section present, no <RESOLVE> slots left, and at least one
   // concrete path:line token (a real diagnosis cites a line, not just the words "file:line").
-  const hasUnresolved = /<RESOLVE/i.test(p);
-  const hasConcreteLocation = /[\w./-]+\.[A-Za-z]{1,5}:\d+/.test(p);
+  // Scope these to the PROBLEM ANALYSIS region (up to the next section: WRITE SAFETY GATE for
+  // write modes, CONTEXT WINDOW for read-only). Whole-prompt scoping entangled this axis with the
+  // plan — an unfilled TASK PLAN would drag solutionReadiness to draft, defeating the two
+  // orthogonal axes. Region scoping keeps it measuring ONLY the diagnostic center.
+  const probIdx = p.search(/PROBLEM ANALYSIS/i);
+  let probRegion = '';
+  if (probIdx >= 0) {
+    const after = p.slice(probIdx + 'PROBLEM ANALYSIS'.length);
+    const nextHdr = after.search(/WRITE SAFETY GATE|CONTEXT WINDOW/i);
+    probRegion = nextHdr >= 0 ? after.slice(0, nextHdr) : after;
+  }
+  const hasUnresolved = /<RESOLVE/i.test(probRegion);
+  const hasConcreteLocation = /[\w./-]+\.[A-Za-z]{1,5}:\d+/.test(probRegion);
   const solutionReadiness = !hasProblemSection ? 'missing'
     : (hasUnresolved || !hasConcreteLocation) ? 'draft' : 'ready';
 

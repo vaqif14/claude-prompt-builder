@@ -312,6 +312,142 @@ const MODES = {
       'Go/No-Go recommendation',
     ],
   },
+  hackathon: {
+    label: 'Hackathon / Demo MVP',
+    keywords: /hackathon|\bdemo\b|\bmvp\b|\bpitch\b|judging|judges|one[\s-]?(?:day|week) build|ship in a (?:day|weekend)/,
+    authority: 'Domain-first, narrow MVP. Build the smallest thing that proves the idea and demos cleanly — no feature sprawl.',
+    subTasks: [
+      'Frame the domain problem and the one insight that wins — not a generic CRUD app',
+      'Cut scope to a single end-to-end happy path that fits the time box',
+      'Build the MVP slice; stub or fake everything off the critical demo path',
+      'Write a 60–90s demo script: the exact clicks/inputs that show the insight',
+      'Map the judging criteria and make each one visibly satisfied',
+      'Produce README + demo evidence (screenshots/video) that look production-real',
+    ],
+    acceptanceCriteria: [
+      'One end-to-end happy path works live, no crash in the demo flow',
+      'The domain insight is obvious to a judge in under 90 seconds',
+      'Scope is narrow: nothing built that the demo does not show',
+      'Demo script is written and rehearsed against the running app',
+      'README states problem, insight, stack, and how to run',
+      'Risk list: what is faked/stubbed and what would be next',
+    ],
+    toolPermissions: [
+      'READ: all source files',
+      'WRITE: allowed broadly — speed over polish off the demo path',
+      'EDIT: preferred for existing files',
+      'EXECUTE: build/run/test and demo commands',
+      'FORBIDDEN: git push / deploy without approval; do not over-engineer infra',
+    ],
+    outputSchema: [
+      'Problem + domain insight (1 paragraph)',
+      'MVP scope: in / out (explicit cut list)',
+      'Demo script: numbered steps with expected on-screen result',
+      'Judging-criteria map: criterion → where it is satisfied',
+      'README/demo evidence: screenshots or video link',
+      'Risk + next-steps: what is faked, what is real',
+    ],
+  },
+  'agent-readiness': {
+    label: 'Agent Readiness Audit (.claude portfolio)',
+    keywords: /agent[\s-]?readiness|\.claude|claude\.md|agent (?:config|setup|portfolio)|skills? audit|hooks? audit|mcp (?:audit|config)/,
+    authority: 'Read-only audit of the project\'s agent configuration. Score and recommend; do not change config without approval.',
+    subTasks: [
+      'Inventory CLAUDE.md / AGENTS.md: present? scoped? contradicts the code?',
+      'Inventory .claude/skills: count, relevance, stale or duplicate skills',
+      'Inventory .claude/agents (subagents) and their tool scopes',
+      'Inventory hooks/settings: guardrails, permissions, dangerous-command blocks',
+      'Inventory MCP config: servers, auth state, tool overlap, context cost',
+      'Check for verification scripts (lint/typecheck/test) the agent can rely on',
+    ],
+    acceptanceCriteria: [
+      'Each dimension scored: Context, Skills, Agents, Hooks, MCP, Verification, Safety',
+      'Findings cite the real file path (no large file inlined — paths + summaries only)',
+      'Stale/duplicate/unused config flagged with a remove/keep recommendation',
+      'Missing verification scripts called out as a top gap',
+      'Overall readiness verdict: Ready | Gaps | Not agent-ready',
+    ],
+    toolPermissions: [
+      'READ: CLAUDE.md, .claude/**, settings, MCP config, package scripts',
+      'WRITE: blocked',
+      'EXECUTE: read-only inspection commands only',
+      'FORBIDDEN: editing config, installing skills/MCP, committing',
+    ],
+    outputSchema: [
+      'Readiness scorecard: dimension → score → one-line reason',
+      'Top gaps ordered by impact, each with a file path',
+      'Skill/agent/MCP bloat list with keep/remove recommendation',
+      'Missing guardrails (hooks/permissions/verification)',
+      'Overall verdict: Ready | Gaps | Not agent-ready',
+    ],
+  },
+  'tooling-review': {
+    label: 'Tooling / MCP Readiness',
+    keywords: /tooling review|mcp (?:review|readiness)|tool (?:overload|overlap|audit)|integration audit|which tools/,
+    authority: 'Read-only audit of available integrations (MCP servers, CLI tools, auth, sandbox). Warn before recommending anything that needs auth or broad permissions.',
+    subTasks: [
+      'List available MCP servers and the tools each exposes',
+      'List CLI tools the task would use and whether they are installed',
+      'Check auth/session state for each integration (logged in? token present?)',
+      'Check sandbox/network constraints that block tool calls',
+      'Check JSON/streaming output support for tools the agent will parse',
+      'Flag tool overlap/ambiguity (two tools that do the same thing)',
+    ],
+    acceptanceCriteria: [
+      'Every required tool mapped to: available | missing | needs-auth | blocked',
+      'Auth-required and broad-permission tools flagged before recommendation',
+      'Sandbox/network blockers named precisely',
+      'Tool overlap resolved to a single recommended tool per job',
+      'Verdict: Tooling ready | Tooling gaps | Blocked',
+    ],
+    toolPermissions: [
+      'READ: MCP config, settings, package manifests, lockfiles',
+      'EXECUTE: read-only capability/version checks only',
+      'WRITE: blocked',
+      'FORBIDDEN: authenticating, installing, or invoking tools that mutate state',
+    ],
+    outputSchema: [
+      'Tool inventory: tool → status → auth/permission note',
+      'Missing/blocked tools with the exact blocker',
+      'Overlap resolutions: job → chosen tool → why',
+      'Auth/permission warnings',
+      'Verdict: Tooling ready | Tooling gaps | Blocked',
+    ],
+  },
+  'skill-review': {
+    label: 'Skill Quality / Bloat Review',
+    keywords: /skill[\s-]?review|review (?:this )?skill|skill[\s-]?(?:bloat|quality)|skill\.md/,
+    authority: 'Read-only review of an agent skill against Anthropic skill best practices. Recommend edits; do not rewrite the skill without approval.',
+    subTasks: [
+      'Check frontmatter: name + description clear, trigger conditions explicit',
+      'Check SKILL.md length: concise, progressive disclosure, not a wall of text',
+      'Check references are one level deep (no deep nesting / circular links)',
+      'Flag generic explanation the model already knows (context waste)',
+      'Flag deterministic operations that should be scripts, not prose instructions',
+      'Check for test/eval examples that prove the skill works',
+    ],
+    acceptanceCriteria: [
+      'Frontmatter description scored for clarity and trigger coverage',
+      'SKILL.md length assessed; bloat flagged with file:line',
+      'One-level-reference rule checked',
+      'Generic/explanatory filler flagged with file:line',
+      'Missing scripts for deterministic ops flagged',
+      'Verdict: Concise & effective | Needs trimming | Bloated/unclear',
+    ],
+    toolPermissions: [
+      'READ: the skill\'s SKILL.md, references, scripts, and frontmatter',
+      'WRITE: blocked',
+      'FORBIDDEN: editing the skill, installing, committing',
+    ],
+    outputSchema: [
+      'Frontmatter assessment: clarity + trigger coverage',
+      'Length/bloat findings with file:line',
+      'Reference-depth and structure findings',
+      'Filler/generic-explanation findings with file:line',
+      'Missing-script recommendations',
+      'Verdict: Concise & effective | Needs trimming | Bloated/unclear',
+    ],
+  },
   'prd-to-tasks': {
     label: 'PRD to Tasks',
     keywords: /prd|spec|requirements|break this into tasks|user story|epic|ticket/,
@@ -359,8 +495,12 @@ function inferMode(task, explicitMode) {
 
   // Order matters: check specific modes before general ones to avoid false positives
   const modeOrder = [
+    // Most specific first. The new review modes carry the word "review"/"audit", which the
+    // broad `audit` mode also matches — they MUST be tested before `audit` or they'd be
+    // swallowed. `hackathon` carries "build/mvp" which `feature` matches — test it before too.
+    'skill-review', 'agent-readiness', 'tooling-review',
     'design-review', 'architecture-review', 'security-review', 'performance-review',
-    'release-check', 'prd-to-tasks',
+    'release-check', 'prd-to-tasks', 'hackathon',
     'audit', 'bugfix', 'refactor', 'feature'
   ];
 

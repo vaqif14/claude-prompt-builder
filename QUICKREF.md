@@ -22,9 +22,18 @@ prompt-builder --mode security-review "audit auth flow"
 prompt-builder --mode performance-review "why is this slow"
 prompt-builder --mode release-check "ready to deploy"
 prompt-builder --mode prd-to-tasks "break PRD into tasks"
+prompt-builder --mode hackathon "build the mvp for our demo"
+prompt-builder --mode agent-readiness "audit our .claude setup"
+prompt-builder --mode tooling-review "check mcp readiness"
+prompt-builder --mode skill-review "review this skill for bloat"
 
 # Platform override
 prompt-builder --platform ios "review login screen"
+
+# Context diet + selective install profile
+prompt-builder --context-report "refactor api"     # token usage + diet (lean/ok/heavy) + bloat warnings
+prompt-builder --profile web "add a dashboard"      # curated, capped, approval-required skill set
+prompt-builder --profile ai-agent "add a RAG step"  # profiles: web | backend | mobile | ai-agent | hackathon
 
 # Stack profile cache
 prompt-builder --init-stack-profile --stack nextjs
@@ -83,6 +92,16 @@ const analysis = skillMatcher.analyzeTask("fix login bug");
 | performance-review | `--mode performance-review` | Slow, optimize, profile |
 | release-check | `--mode release-check` | Ready to deploy |
 | prd-to-tasks | `--mode prd-to-tasks` | Break PRD into tasks |
+| hackathon | `--mode hackathon` | Domain-first narrow MVP + demo proof |
+| agent-readiness | `--mode agent-readiness` | `.claude` portfolio audit (read-only) |
+| tooling-review | `--mode tooling-review` | MCP/CLI tool & auth readiness (read-only) |
+| skill-review | `--mode skill-review` | Agent-skill quality / bloat (read-only) |
+
+## Every prompt also carries
+
+- **Workflow Pattern** — the composable agent shape to run (`single-pass` … `orchestrator-workers` … only `autonomous-loop` when warranted).
+- **Verification Contract** — claims split by proof: provable-by-source / -command / -browser-device / blocked-by. No proof → "Blocked", never an optimistic "Working".
+- **Context Diet** — `lean`/`ok`/`heavy` grade + bloat warnings (`metadata.contextDiet`, `--context-report`).
 
 ## Platforms (auto-detected)
 
@@ -102,8 +121,12 @@ web, backend, ios, android, flutter, react-native, desktop, cli, devops, ai, lar
 | Stop conditions | 8 |
 | Output schema actionable | 8 |
 | Not generic (no placeholders) | 8 |
+| Workflow pattern selected | 4 |
+| Verification-first contract present | 5 |
 | Prompt length (800-20k chars) | 8 |
 | Stack profile / best practices / anti-patterns / verification | 20 |
+
+Plus orthogonal readiness axes (not part of the scaffold score): `solutionReadiness`, `planReadiness` → combined `readiness` (READY only when both the diagnosis and the task plan are filled from real code).
 
 **Thresholds:** 80+ pass | 60-79 warn | <60 fail
 
@@ -114,12 +137,15 @@ web, backend, ios, android, flutter, react-native, desktop, cli, devops, ai, lar
 | `bin/prompt-builder.js` | CLI entry point |
 | `src/index.js` | Main orchestrator |
 | `src/platform-detector.js` | 18-platform detection + mixed lanes |
-| `src/mode-router.js` | 10-mode inference + mode configs |
+| `src/mode-router.js` | 14-mode inference + mode configs |
 | `src/skill-matcher.js` | Skill mapping, agent council, task board |
+| `src/workflow-router.js` | Composable agent workflow-pattern selection |
 | `src/prompt-assembler.js` | Prompt generation |
 | `src/stack-cache.js` | Project stack profile MD cache |
 | `src/model-router.js` | Complexity-based model selection |
 | `src/context-manager.js` | Token budgeting + section priorities |
+| `src/context-diet.js` | Context-pressure scoring + bloat warnings |
+| `src/install-profiles.js` | Curated, capped selective-install profiles |
 | `src/sanitize.js` | CSV sanitization + untrusted-task neutralization |
 | `src/session-store.js` | Session persistence (~/.prompt-builder) |
 | `src/error-handler.js` | Structured error categorization |

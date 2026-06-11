@@ -84,6 +84,14 @@ node bin/prompt-builder.js --json "fix bug"                 # JSON
 node bin/prompt-builder.js --save prompt.txt "refactor api" # save to file
 node bin/prompt-builder.js --print-skills-only "design card" # skills only
 
+# Model / sessions / token budget
+node bin/prompt-builder.js --model opus "refactor api"      # force model for all agents (haiku|sonnet|opus)
+node bin/prompt-builder.js --session-id <id> "continue"     # resume a prior session
+node bin/prompt-builder.js --list-sessions                  # show recent sessions
+node bin/prompt-builder.js --max-tokens 8000 "big task"     # token budget (default 6000)
+node bin/prompt-builder.js --full "big task"                # disable token compression (emit every section)
+node bin/prompt-builder.js --context-report "task"          # print per-section token usage
+
 # Lists
 node bin/prompt-builder.js --list-modes
 node bin/prompt-builder.js --list-stacks
@@ -91,6 +99,13 @@ node bin/prompt-builder.js --list-stacks
 # Validate a generated prompt file
 node scripts/validate.js prompt.txt
 ```
+
+**Grounding requires the target repo as cwd.** The codebase-grounding engine (Grounded Targets,
+real build commands, ranked targets, invariants) only runs against `process.cwd()`. Run the CLI
+**from the root of the project being worked on** — do NOT `cd` into the skill directory first. If
+cwd is wrong, the prompt silently grounds in the wrong repo and falls back to the generic
+(ungrounded) Grounding Contract. Token-compression note: the default 6000-token budget can elide
+lower-priority sections; use `--full` when you need the complete prompt, or `--max-tokens` to widen it.
 
 ## Intent Routing
 
@@ -111,22 +126,41 @@ Ask at most one clarifying question, and only after reading the codebase fails t
 
 ## Professional Prompt Shape
 
-Generate these sections in order:
+The CLI emits these sections in this order (this is the real v1.9.0 output, not an idealized list).
+The five **bolded** sections are the differentiator — a generic prompt builder has none of them.
+The CLI emits them with `<RESOLVE>` slots; the SKILL fills the two marked ⬅ from code it actually reads.
 
 1. **System Contract**: senior role, exact mission, authority level
-2. **Context Window**: stack, known project constraints, target paths if known
-3. **Skill Discovery Preflight**: local skill scan + ecosystem search + install/load recommendation format
-4. **Matched Skills**: only skills that directly improve the task
-5. **Required Skills To Invoke**: exact skill names, reasons, and execution order
-6. **Agent Review Council**: role-based passes such as designer, UI architect, frontend reviewer, browser QA, verification
-7. **Multi-Agent Task Board**: task cards with id | owner | skill | title | status | depends_on | artifact
-8. **Execution Plan**: checkbox tasks, first task active
-9. **Tool Directives**: read/write/execute/browser permissions and forbidden actions
-10. **Constraints**: scope fences and stop-and-ask triggers
-11. **Stop Conditions**: when to escalate or halt
-12. **Acceptance Criteria**: measurable gates, not vague quality statements
-13. **Evidence Gates**: every claim must be backed by file:line, screenshot, command output, or log
-14. **Output Format**: exact report shape expected from the coding agent
+2. **Workflow Pattern**: the composable agent shape to run (single-pass / prompt-chain / routing / parallel-review / orchestrator-workers / evaluator-optimizer / autonomous-loop) with a one-line shape + rationale — simple/composable before autonomous
+3. **Grounded Targets**: auto-detected from the repo — detected stack, real build/test commands, ranked target files, project invariants (only when run with the target repo as cwd; see grounding note below)
+4. **Grounding Contract**: surface-aware slots (entry point, data layer, contracts, schema…) to resolve to real `file:line` before executing
+5. **Problem Analysis & Solution Direction** ⬅ *the diagnostic center* — root cause at `path:line`, why it matters in THIS code, the specific fix. SKILL fills this; an unfilled one = `solutionReadiness: draft`
+6. **Write Safety Gate** (write modes only): plan-approval gate + invariant fence; takes precedence over the plan
+7. **Context Window**: stack profile, detected platform profile, target-surface hints, user profile
+8. **Skill Discovery Preflight**: stack-profile-cache-first local scan + ecosystem search + install/load recommendation format
+9. **Selective Install Profile** (only with `--profile`): a small, capped (≤6), approval-required curated skill set for the project shape
+10. **Matched Skills** + **Required Skills To Invoke**: exact skill names, reasons, execution order
+11. **Multi-Agent Task Board**: task cards `id | owner | skill | title | status | depends_on | artifact` + skill-binding rule
+12. **Agent Review Council** (+ **Designer Rubric** for visual surfaces): role-based passes
+13. **Model Assignments**: complexity → model per agent
+14. **Task Plan** ⬅ spec-kit-style rows (`T###` edit tasks with `file:line` + acceptance + `depends_on`; read-only modes emit an `F###` findings ledger with evidence). SKILL fills this; an unfilled one = `planReadiness: draft`
+15. **Tool Directives**: read/write/execute/browser permissions and forbidden actions
+16. **Constraints** (+ scope fences and stop-and-ask triggers)
+17. **Stack Best Practices / Anti-Patterns / Verification Gates** (+ **Stop Conditions**)
+18. **Verification Contract**: every claim split by the proof that backs it — provable-by-source / -command / -browser-device / blocked-by — so "Blocked" is first-class and nothing is claimed without proof
+19. **Acceptance Criteria** + **Evidence Gates**: every claim backed by `file:line`, screenshot, command output, or log
+20. **Output Schema**: exact report shape expected from the coding agent
+
+**Context diet.** Every run scores the prompt for context pressure (`lean`/`ok`/`heavy`), flags
+oversized sections and missing stack-profile caching, and recommends a `--max-tokens`. Surfaced in
+`metadata.contextDiet`, `--context-report`, and the CLI metadata card — context overload is the main
+agent failure mode, so the builder measures it.
+
+**Two-axis readiness (the hard gate).** `validate.js` reports a scaffold score (0–100) AND two
+orthogonal readiness flags. `solutionReadiness` is `ready` only when section 4 has no `<RESOLVE>`
+left and contains a real `path:line` token. `planReadiness` is `ready` only when section 12 is
+likewise filled. Overall `readiness` is `ready` only when BOTH are. A 100/100 scaffold with an
+unfilled diagnostic center is a DRAFT — do not hand it off.
 
 The generated prompt must include these rules:
 
@@ -155,7 +189,7 @@ Every generated prompt should require the next agent to:
 
 ## Stack Profile Cache
 
-Version 1.5.1 adds a project-local cache so prompt generation does not spend tokens repeating the same stack/skill discovery on every run.
+A project-local cache lets prompt generation skip repeating the same stack/skill discovery on every run.
 
 Default CLI behavior:
 
@@ -258,6 +292,10 @@ Every generated prompt should include:
 | `performance-review` | slow, optimize, profile | Performance audit |
 | `release-check` | release, deploy, ship | Release readiness |
 | `prd-to-tasks` | prd, spec, break into tasks | PRD decomposition |
+| `hackathon` | hackathon, mvp, demo, pitch, judging | Domain-first narrow MVP + demo proof |
+| `agent-readiness` | .claude, CLAUDE.md, skills/hooks/mcp audit | Read-only `.claude` portfolio audit |
+| `tooling-review` | mcp readiness, tool overload, integration audit | Read-only MCP/CLI tool & auth audit |
+| `skill-review` | skill review, skill bloat, SKILL.md | Read-only agent-skill quality review |
 
 ## Next Steps
 

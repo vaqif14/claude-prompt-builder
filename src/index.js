@@ -17,6 +17,9 @@ const modeRouter = require('./mode-router');
 const skillMatcher = require('./skill-matcher');
 const stackCache = require('./stack-cache');
 const modelRouter = require('./model-router');
+const workflowRouter = require('./workflow-router');
+const contextDiet = require('./context-diet');
+const installProfiles = require('./install-profiles');
 
 module.exports = {
   generatePrompt,
@@ -49,4 +52,12 @@ module.exports = {
   ensureStackProfile: stackCache.ensureStackProfile,
   getStackProfilePath: stackCache.getStackProfilePath,
   scanInstalledSkills: stackCache.scanInstalledSkills,
+  // v1.10.0 — agentic OS additions
+  workflowRouter,
+  selectWorkflowPattern: workflowRouter.selectWorkflowPattern,
+  contextDiet,
+  scoreContextDiet: contextDiet.scoreContextDiet,
+  installProfiles,
+  getInstallProfile: installProfiles.getInstallProfile,
+  listInstallProfiles: installProfiles.listInstallProfiles,
 };

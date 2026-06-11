@@ -11,6 +11,9 @@ const { ensureStackProfile } = require('./stack-cache');
 const { selectModel } = require('./model-router');
 const { sanitizeCsvValue, neutralizeUserText } = require('./sanitize');
 const { groundInRepo } = require('./codebase-grounding');
+const { selectWorkflowPattern } = require('./workflow-router');
+const { scoreContextDiet } = require('./context-diet');
+const { getInstallProfile } = require('./install-profiles');
 
 function parseRows(file) {
   if (!fs.existsSync(file)) return [];
@@ -290,11 +293,20 @@ function generatePrompt(task, options = {}) {
       })
     : null;
   const skillDiscoveryProtocol = getSkillDiscoveryProtocol(task, analysis.domains, platforms, stack, stackProfile);
-  const agentCouncil = getAgentCouncil(task, mode, complexity, options, surface);
+  const agentCouncil = getAgentCouncil(task, mode, complexity, options, surface, platforms);
   const designerRubric = getDesignerRubric(task);
   const taskBoard = getMulticaStyleTaskBoard(task, mode, platforms, surface);
 
-  const isReadOnly = ['audit', 'design-review', 'architecture-review', 'security-review', 'performance-review', 'release-check'].includes(mode);
+  const isReadOnly = ['audit', 'design-review', 'architecture-review', 'security-review', 'performance-review', 'release-check', 'agent-readiness', 'tooling-review', 'skill-review'].includes(mode);
+
+  // Workflow pattern (Anthropic "Building Effective Agents"): tell the next agent which
+  // composable workflow shape to run, not only which skills to load. Computed from the
+  // resolved mode, complexity, surface count, and council size.
+  const workflow = selectWorkflowPattern({ mode, complexity, platforms, agentCount: agentCouncil.length, task });
+
+  // Selective install profile (opt-in via --profile): a small curated skill set for the
+  // project shape, capped and approval-required — never a bulk mega-setup.
+  const installProfile = getInstallProfile(options.profile);
 
   // Build prompt sections
   const promptSections = []
@@ -312,6 +324,21 @@ function generatePrompt(task, options = {}) {
       '',
       'Task Understanding:',
       ...taskUnderstanding.map(item => `  • ${item}`),
+      '',
+    ],
+  })
+
+  promptSections.push({
+    name: 'WORKFLOW PATTERN',
+    lines: [
+      '═══════════════════════════════════════════════════════════════',
+      '  WORKFLOW PATTERN — the agent shape to run (simple/composable before autonomous)',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      `Pattern: ${workflow.pattern}`,
+      `Shape: ${workflow.description}`,
+      `Why: ${workflow.rationale}`,
+      'Rule: prefer this composable shape; escalate to a more autonomous loop only if it provably fails.',
       '',
     ],
   })
@@ -463,6 +490,25 @@ function generatePrompt(task, options = {}) {
       '',
     ],
   })
+
+  if (installProfile) {
+    promptSections.push({
+      name: 'SELECTIVE INSTALL PROFILE',
+      lines: [
+        '═══════════════════════════════════════════════════════════════',
+        `  SELECTIVE INSTALL PROFILE — ${installProfile.label} (curated, capped, approval-required)`,
+        '═══════════════════════════════════════════════════════════════',
+        '',
+        'A small curated set for this project shape — NOT a bulk install. Each item earns its place:',
+        ...installProfile.items.map(i => `  • ${i.name} — ${i.why}`),
+        '',
+        'Install rule: these are recommendations only. Ask the user before running any install; prefer',
+        'already-installed equivalents found in skill discovery. Add with `npx skills add <name> -g -y`',
+        'then `/reload-skills`. Do not install items the task does not actually need.',
+        '',
+      ],
+    })
+  }
 
   promptSections.push({
     name: 'MATCHED SKILLS',
@@ -622,6 +668,29 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  // Verification-First Contract (Anthropic Claude Code guidance): if the agent cannot prove
+  // it, it must not claim it. Split every claim by what KIND of proof backs it, and name the
+  // blockers up front so "Blocked" is a first-class outcome, not a silent assumption.
+  promptSections.push({
+    name: 'VERIFICATION CONTRACT',
+    lines: [
+      '═══════════════════════════════════════════════════════════════',
+      '  VERIFICATION CONTRACT — what may be claimed, and on what proof',
+      '═══════════════════════════════════════════════════════════════',
+      '',
+      'Classify every claim by the proof that backs it. A claim with no matching proof is not made.',
+      '  • Provable by source: read the resolved file:line — structure, types, contracts, control flow.',
+      `  • Provable by command: ${surface.isService || !surface.isUi ? 'typecheck / lint / test / build output and logs / traces / query output' : 'typecheck / lint / test / build output'} — paste pass/fail, never assume green.`,
+      ...(surface.isUi ? ['  • Provable by browser/device: screenshots + console + network on the resolved route, at the real breakpoints, when a dev server/emulator is up.'] : []),
+      `  • Blocked-by: name the exact missing prerequisite — ${surface.isUi ? 'dev server, ' : ''}auth/credentials, running services, database, seed data, sandbox/network, or missing tooling.`,
+      '',
+      isReadOnly
+        ? 'Verdict rule: do NOT output "Working"/"Secure"/"Fast"/"Ready" unless the matching proof above is attached. Missing proof → "Blocked" (with the blocker) or "Working with issues" — never an optimistic guess.'
+        : 'Done rule: do NOT report the change "done"/"fixed"/"working" unless a regression test or command output proves the changed path — compiling is not proof. No proof → say so and report "Blocked" with the blocker.',
+      '',
+    ],
+  })
+
   promptSections.push({
     name: 'ACCEPTANCE CRITERIA',
     lines: [
@@ -683,6 +752,15 @@ function generatePrompt(task, options = {}) {
   }
 
   const maxTokens = options.full ? null : (options.maxTokens === undefined ? 6000 : options.maxTokens)
+
+  // Context diet: score the FULL section set (pre-budgeting) for context pressure and bloat.
+  // Diagnostic only — it never elides; it tells the operator whether the prompt is lean/ok/heavy
+  // and what to trim. Budget reference is the active maxTokens, or the default when --full.
+  const contextDiet = scoreContextDiet(promptSections, {
+    maxTokens: maxTokens || (options.maxTokens === undefined ? 6000 : options.maxTokens) || 6000,
+    stackProfileStatus: stackProfile ? stackProfile.status : null,
+  })
+
   let finalSections = promptSections
   let budget = null
 
@@ -719,6 +797,10 @@ function generatePrompt(task, options = {}) {
     lines.push('')
     lines.push('<!-- Context Report')
     lines.push(`Total: ${report.totalTokens} tokens | Budget: ${maxTokens || 'unlimited'}`)
+    lines.push(`Context diet: ${contextDiet.grade.toUpperCase()} (~${contextDiet.estTokens}t in ${contextDiet.sectionCount} sections) | recommended --max-tokens ${contextDiet.recommendedMaxTokens}`)
+    for (const w of contextDiet.warnings) {
+      lines.push(`  ⚠ ${w}`)
+    }
     for (const s of report.sections) {
       lines.push(`  ${s.name}: ${s.used} used / ${s.allocated} allocated (${s.action})`)
     }
@@ -742,6 +824,16 @@ function generatePrompt(task, options = {}) {
       domains: analysis.domains.map(d => d.domain),
       agents: analysis.agentCount,
       readOnly: isReadOnly,
+      workflowPattern: workflow.pattern,
+      contextDiet: {
+        grade: contextDiet.grade,
+        estTokens: contextDiet.estTokens,
+        sectionCount: contextDiet.sectionCount,
+        toolSkillSections: contextDiet.toolSkillSections,
+        recommendedMaxTokens: contextDiet.recommendedMaxTokens,
+        warnings: contextDiet.warnings,
+      },
+      installProfile: installProfile ? installProfile.label : null,
       stackProfile: stackProfile ? {
         status: stackProfile.status,
         path: stackProfile.relativePath,
