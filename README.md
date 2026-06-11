@@ -83,6 +83,7 @@ prompt-builder --trust-details <skill-name>
 - **Verification-First Contract** — Every claim split by its proof (source / command / browser-device / blocked-by); no proof → "Blocked", never an optimistic "Working"
 - **Exploration + Write-Safety Contracts** — Ground files before conclusions; write modes start in Planning when risk or scope requires it
 - **Clarify-First Gate** — Ambiguous requests stop with concrete A/B repository targets before diagnosis
+- **Topic-Derived Titles** — Every prompt starts with `═══ <title> ═══` (e.g. `Spring Boot: dashboard query fix`); `--json` exposes `title`+`slug`; `--save-auto` writes `./<slug>.md` (`--force` to overwrite); sessions and `--list-sessions` show titles. Deterministic, no deps, AZ/TR-aware slugs
 - **Data-Driven Agent Cards** — Reviewer roles, scope, exclusions, evidence, and primary skills load from validated data
 - **Context Diet** — Scores each prompt `lean`/`ok`/`heavy`, flags bloat + missing cache, recommends `--max-tokens`
 - **Quality Bar (dev-metrics aligned)** — Engineered to score 9–10 on the six session-quality dimensions (prompt, context, response, task clarity, verification, tool use); self-reports coverage in `metadata.qualityRubric`

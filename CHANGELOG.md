@@ -4,6 +4,33 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-06-12
+
+Topic-derived titles. Every generated prompt, saved file, and session record now gets a short,
+human-readable title derived from the task — pure heuristics, deterministic, no deps, no LLM.
+
+### Added
+
+- **`src/title.js`** — `deriveTitle(task, analysis)` builds `"<Stack>: <core nouns> <mode suffix>"`
+  (≤60 chars, Title-Case prefix only, deterministic): stack/platform prefix, task nouns minus
+  instruction verbs/fillers/stopwords (EN + AZ/TR), mode-derived suffix (e.g. `security audit`),
+  fallback chain (first 6 words → `Untitled task`). `deriveSlug(title)` → fs-safe slug (≤50,
+  AZ/TR transliteration ə→e/ş→s/ç→c/ğ→g/ı→i/ö→o/ü→u, never empty → `prompt`). Task is run through
+  the structural neutralizer first, so a malicious task cannot forge a section header.
+- **Title header** — the generated prompt starts with `═══ <TITLE> ═══` (both `--full` and
+  `--compact`); `--json` gains top-level `title` + `slug`.
+- **`--save-auto`** — writes the prompt to `./<slug>.md`; refuses to overwrite unless `--force`.
+  Mutually exclusive with `--save`/`--save-draft`; `--force` only applies to `--save-auto`.
+- **Sessions** carry `title` (from the first task); old records without it list as a 40-char
+  first-task excerpt. `--list-sessions` now prints an `id | title | turns | updated` table
+  (most recent first, ≤20; friendly one-liner when empty).
+
+### Changed
+
+- `createSession(...)` accepts `metadata.title`; `summarize()` falls back to a task excerpt for
+  pre-title records (backward compatible — old JSONL loads without throwing). No new dependencies.
+  +16 tests (title, title-integration); suite 211 → 227.
+
 ## [2.0.0] - 2026-06-11
 
 Professional hardening release. Prompt Builder now treats prompt text, configuration data, skill

@@ -45,6 +45,10 @@ prompt-builder --compact "add timer"           # minimal output
 prompt-builder --json "fix bug"                 # JSON for piping
 prompt-builder --save prompt.txt "refactor api" # READY prompts only
 prompt-builder --save-draft prompt.txt "refactor api" # explicit unresolved scaffold
+prompt-builder --save-auto "fix slow dashboard query in spring boot"  # → ./spring-boot-dashboard-query-fix.md
+prompt-builder --save-auto --force "..."              # overwrite existing slug file
+prompt-builder --list-sessions                        # id | title | turns | updated (≤20)
+prompt-builder --json "..."                           # JSON gains top-level title + slug
 prompt-builder --print-skills-only "design card" # matched skills only
 
 # Discovery
