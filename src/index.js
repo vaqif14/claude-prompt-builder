@@ -21,6 +21,7 @@ const workflowRouter = require('./workflow-router');
 const contextDiet = require('./context-diet');
 const installProfiles = require('./install-profiles');
 const qualityRubric = require('./quality-rubric');
+const skillDiscovery = require('./skill-discovery');
 
 module.exports = {
   generatePrompt,
@@ -64,4 +65,6 @@ module.exports = {
   qualityRubric,
   assessPromptQuality: qualityRubric.assessPromptQuality,
   buildQualityBar: qualityRubric.buildQualityBar,
+  skillDiscovery,
+  discoverSkills: skillDiscovery.discoverSkills,
 };
