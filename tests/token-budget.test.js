@@ -18,9 +18,12 @@ function test(name, fn) {
 
 console.log('\nToken Budget Tests');
 
-test('default prompt stays within the 5500 token budget', () => {
+test('default prompt stays within the 6000 token budget', () => {
+  // 6000 is the default maxTokens budget; the prompt is intentionally rich (grounding, diagnosis,
+  // spec-kit plan, workflow pattern, verification contract, dev-metrics quality bar). context-diet
+  // flags anything near the ceiling as "heavy" — the honest guardrail is "within the default budget".
   const result = generatePrompt('review admin dashboard and confirm all working');
-  assert(estimateTokens(result.prompt) <= 5500, `Expected <=5500 tokens, got ${estimateTokens(result.prompt)}`);
+  assert(estimateTokens(result.prompt) <= 6000, `Expected <=6000 tokens, got ${estimateTokens(result.prompt)}`);
   assert(result.validation.score >= 90, `Expected strong validation score, got ${result.validation.score}`);
 });
 

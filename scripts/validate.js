@@ -85,6 +85,11 @@ function validatePrompt(promptText) {
     /Provable by source|Provable by command|Blocked-by/i.test(p);
   checks.push({ pass: hasVerificationContract, label: 'Verification-first contract present', points: 5 });
 
+  // 7f. Quality bar (3 pts): the prompt must carry the dev-metrics quality bar that targets 9–10
+  // on prompt/context/task-clarity/verification/tool-use — with verification + tool-use called out.
+  const hasQualityBar = /QUALITY BAR/i.test(p) && /weak spot|dev-metrics/i.test(p);
+  checks.push({ pass: hasQualityBar, label: 'Quality bar (dev-metrics rubric) present', points: 3 });
+
   // 8. Prompt Length (8 pts)
   const tokens = Math.ceil(p.length / 4);
   const lengthOk = tokens > 200 && tokens < 6800;

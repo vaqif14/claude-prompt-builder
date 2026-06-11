@@ -189,6 +189,22 @@ test('every prompt reports a context-diet grade in metadata', () => {
   assert(r.metadata.contextDiet.estTokens > 0, 'diet token estimate present');
 });
 
+test('every prompt carries the dev-metrics QUALITY BAR and covers all 6 rubric dimensions', () => {
+  for (const tc of TEST_CASES) {
+    const r = generatePrompt(tc.task, tc.options || {});
+    assert(/QUALITY BAR/.test(r.prompt), `${tc.task}: missing QUALITY BAR`);
+    assert(/weak spot/.test(r.prompt), `${tc.task}: quality bar must call out the weak spots`);
+    assert.strictEqual(r.metadata.qualityRubric.covered, 6, `${tc.task}: rubric ${r.metadata.qualityRubric.covered}/6, gaps ${JSON.stringify(r.metadata.qualityRubric.gaps)}`);
+  }
+});
+
+test('verification contract carries rubric-10 rigor (read diffs / side-effects / silent failures)', () => {
+  const p = generatePrompt('fix the failing payment bug', {}).prompt;
+  assert(/read every diff/i.test(p), 'must require reading diffs');
+  assert(/side-effects \/ regressions/i.test(p), 'must require side-effect/regression checks');
+  assert(/silent failures/i.test(p), 'must require hunting silent failures');
+});
+
 test('--profile injects a capped, approval-required SELECTIVE INSTALL PROFILE', () => {
   const r = generatePrompt('add a countdown timer', { profile: 'web' });
   assert(/SELECTIVE INSTALL PROFILE/.test(r.prompt), 'profile section present');

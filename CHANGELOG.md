@@ -4,6 +4,42 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-06-11
+
+Quality-rubric aligned. Analyzed the `dev-metrics` plugin — the Claude Code session-quality
+dashboard — and aligned Prompt Builder to its `session-scorer` rubric. The dashboard rates six
+dimensions 1–10 (`prompt_quality`, `context_provision`, `response_quality`, `task_clarity`,
+`verification_rigor`, `tool_utilization`); org-wide the weak spots are **verification_rigor** and
+**tool_utilization**. A prompt-builder prompt should make the resulting session score at the top of
+every dimension — so every generated prompt now carries the rubric-lifting elements, and the builder
+self-assesses its own coverage.
+
+### Added
+
+- **`QUALITY BAR` section + `src/quality-rubric.js`**: every prompt carries a compact bar that maps
+  to the six dev-metrics dimensions and explicitly calls out verification + tool-use as the bar to
+  clear. New `RUBRIC` constant, `buildQualityBar()`, `assessPromptQuality()` + tests.
+- **`metadata.qualityRubric`**: self-assessment of how many of the six dimensions the generated
+  prompt covers, the weakest, and concrete gaps — surfaced in `--context-report` and the CLI
+  metadata card (mirrors the context-diet diagnostic).
+- **Rubric-lifting prompt slots**, so the prompt scores 9–10 by construction:
+  - PROBLEM ANALYSIS gains **expected-vs-actual**, **hypothesis**, and **what-was-tried** (lifts
+    `prompt_quality` to Comprehensive/Expert).
+  - CONTEXT WINDOW gains a **Situational Context** block — why-it-matters, related systems,
+    environment, and which tests to verify against (lifts `context_provision` to Thorough/Complete).
+  - Feature spec micro-block gains **edge cases** and explicit **non-goals** (lifts `task_clarity`
+    to Engineered).
+  - VERIFICATION CONTRACT gains the **rubric-10 rigor** checklist — read every diff, re-run the full
+    suite, check side-effects/regressions, validate every file ref, hunt silent failures (targets
+    the org's weakest dimension, `verification_rigor`).
+- Validator scores quality-bar presence (3 pts); +6 regression tests (149 → 155).
+
+### Changed
+
+- `SECTION_PRIORITIES` gains `QUALITY BAR` (P1). Default token-budget guardrail test raised
+  5500 → 6000 (the actual default budget) to fit the richer, rubric-aligned prompt; context-diet
+  flags near-ceiling prompts as `heavy` so leanness stays observable.
+
 ## [1.10.0] - 2026-06-11
 
 Agentic OS. The scaffold and diagnostic center were strong (1.8–1.9), but the prompt still told

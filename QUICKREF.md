@@ -102,6 +102,7 @@ const analysis = skillMatcher.analyzeTask("fix login bug");
 - **Workflow Pattern** — the composable agent shape to run (`single-pass` … `orchestrator-workers` … only `autonomous-loop` when warranted).
 - **Verification Contract** — claims split by proof: provable-by-source / -command / -browser-device / blocked-by. No proof → "Blocked", never an optimistic "Working".
 - **Context Diet** — `lean`/`ok`/`heavy` grade + bloat warnings (`metadata.contextDiet`, `--context-report`).
+- **Quality Bar (dev-metrics aligned)** — engineered to score 9–10 on the 6 session-scorer dimensions (prompt/context/response/task-clarity/verification/tool-use); calls out the weak spots (verification, tool use). `metadata.qualityRubric` reports coverage + gaps.
 
 ## Platforms (auto-detected)
 
@@ -146,6 +147,7 @@ Plus orthogonal readiness axes (not part of the scaffold score): `solutionReadin
 | `src/context-manager.js` | Token budgeting + section priorities |
 | `src/context-diet.js` | Context-pressure scoring + bloat warnings |
 | `src/install-profiles.js` | Curated, capped selective-install profiles |
+| `src/quality-rubric.js` | dev-metrics 6-dimension quality bar + self-assessment |
 | `src/sanitize.js` | CSV sanitization + untrusted-task neutralization |
 | `src/session-store.js` | Session persistence (~/.prompt-builder) |
 | `src/error-handler.js` | Structured error categorization |

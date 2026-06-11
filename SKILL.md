@@ -156,6 +156,17 @@ oversized sections and missing stack-profile caching, and recommends a `--max-to
 `metadata.contextDiet`, `--context-report`, and the CLI metadata card — context overload is the main
 agent failure mode, so the builder measures it.
 
+**Quality bar (dev-metrics aligned).** The generated prompt is engineered to make the resulting
+session score 9–10 on the six dimensions the `dev-metrics` `session-scorer` rates: `prompt_quality`,
+`context_provision`, `response_quality`, `task_clarity`, `verification_rigor`, `tool_utilization`.
+A compact **Quality Bar** section (near the top) states the bar and calls out the org's weak spots —
+**verification rigor** and **tool use**. The rubric is enforced by construction: PROBLEM ANALYSIS
+carries expected-vs-actual / hypothesis / what-was-tried; CONTEXT WINDOW carries
+why-it-matters / related-systems / environment / which-tests; the spec block carries edge cases +
+non-goals; the VERIFICATION CONTRACT carries the rubric-10 rigor checklist (read diffs, re-run the
+full suite, check side-effects, validate every file ref, hunt silent failures). `metadata.qualityRubric`
+self-reports how many dimensions the prompt covers and which to fill.
+
 **Two-axis readiness (the hard gate).** `validate.js` reports a scaffold score (0–100) AND two
 orthogonal readiness flags. `solutionReadiness` is `ready` only when section 4 has no `<RESOLVE>`
 left and contains a real `path:line` token. `planReadiness` is `ready` only when section 12 is

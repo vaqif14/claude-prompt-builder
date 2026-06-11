@@ -74,6 +74,7 @@ prompt-builder --session-id sess_xxx "continue implementation"
 - **Workflow Pattern Router** — Names the composable agent shape to run (single-pass, prompt-chain, routing, parallel-review, orchestrator-workers, evaluator-optimizer, autonomous-loop) — simple/composable before autonomous
 - **Verification-First Contract** — Every claim split by its proof (source / command / browser-device / blocked-by); no proof → "Blocked", never an optimistic "Working"
 - **Context Diet** — Scores each prompt `lean`/`ok`/`heavy`, flags bloat + missing cache, recommends `--max-tokens`
+- **Quality Bar (dev-metrics aligned)** — Engineered to score 9–10 on the six session-quality dimensions (prompt, context, response, task clarity, verification, tool use); self-reports coverage in `metadata.qualityRubric`
 - **Selective Install Profiles** — `--profile web|backend|mobile|ai-agent|hackathon`: a small, capped, approval-required curated skill set (not a bulk mega-setup)
 - **Mixed-Platform Lanes** — Auto-creates integration lane when multiple platforms detected
 - **Skill Discovery Preflight** — Scans local skills + ecosystem search + install recommendations

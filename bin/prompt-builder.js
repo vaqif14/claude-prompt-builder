@@ -112,6 +112,9 @@ function printMetadataCard(meta, validation) {
     chalk.gray('Context Diet').padEnd(16) + ' │ ' + (meta.contextDiet
       ? (meta.contextDiet.grade === 'heavy' ? chalk.red : meta.contextDiet.grade === 'ok' ? chalk.yellow : chalk.green)(`${meta.contextDiet.grade.toUpperCase()} (~${meta.contextDiet.estTokens}t)`)
       : chalk.gray('n/a')),
+    chalk.gray('Quality Rubric').padEnd(16) + ' │ ' + (meta.qualityRubric
+      ? (meta.qualityRubric.covered === meta.qualityRubric.total ? chalk.green : chalk.yellow)(`${meta.qualityRubric.covered}/${meta.qualityRubric.total} dims${meta.qualityRubric.weakest ? ` (fill ${meta.qualityRubric.weakest})` : ''}`)
+      : chalk.gray('n/a')),
     chalk.gray('Scaffold').padEnd(16) + ' │ ' + scoreColor(`${validation.score}/100`),
     chalk.gray('Solution').padEnd(16) + ' │ ' + (validation.solutionReadiness === 'ready'
       ? chalk.green('READY')

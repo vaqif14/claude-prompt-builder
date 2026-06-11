@@ -14,6 +14,7 @@ const { groundInRepo } = require('./codebase-grounding');
 const { selectWorkflowPattern } = require('./workflow-router');
 const { scoreContextDiet } = require('./context-diet');
 const { getInstallProfile } = require('./install-profiles');
+const { buildQualityBar, assessPromptQuality } = require('./quality-rubric');
 
 function parseRows(file) {
   if (!fs.existsSync(file)) return [];
@@ -133,6 +134,8 @@ function buildTaskPlan(mode, isReadOnly, specMicroBlock) {
       '  • User stories: US1 (P1) <RESOLVE — story + independent test>; US2 (P2) <RESOLVE>',
       '  • Functional requirements: FR-001 <RESOLVE — MUST-phrased, testable>; FR-002 <RESOLVE>',
       '  • Success criteria: SC-001 <RESOLVE — measurable, ties to an FR>',
+      '  • Edge cases to handle: <RESOLVE — the inputs/states that break the naive version>',
+      '  • Non-goals (explicitly out of scope this task): <RESOLVE>',
       '',
     );
   }
@@ -343,6 +346,11 @@ function generatePrompt(task, options = {}) {
     ],
   })
 
+  promptSections.push({
+    name: 'QUALITY BAR',
+    lines: buildQualityBar(isReadOnly),
+  })
+
   if (grounding.grounded) {
     const g = grounding;
     const lines = [
@@ -415,9 +423,12 @@ function generatePrompt(task, options = {}) {
       '',
       `  • Root cause / primary ${isReadOnly ? 'finding' : 'problem'} (path:line): <RESOLVE — read the file, name the actual ${isReadOnly ? 'issue at a line, or confirm there is none' : 'smell/bug at a line'}>`,
       '  • Why it matters in THIS code (concrete, not a generic rule): <RESOLVE — the real consequence here>',
+      '  • Expected vs actual (what the code should do vs what it does): <RESOLVE>',
       ...(isReadOnly
         ? ['  • Required fix direction IF an issue exists (specific): <RESOLVE — name the edit, e.g. "route identity through BidderLabelChip at <file:line>"; or "no change — evidence below">']
-        : ['  • Solution direction (specific edit): <RESOLVE — e.g. "extract <method> from <file:line>", "split <class> into <X>/<Y>", "fix N+1 at <line> with JOIN FETCH", "change <A> → <B>">',
+        : ['  • Hypothesis (most likely cause, stated before fixing): <RESOLVE>',
+           '  • What was already tried / ruled out (if anything): <RESOLVE — or "n/a, first attempt">',
+           '  • Solution direction (specific edit): <RESOLVE — e.g. "extract <method> from <file:line>", "split <class> into <X>/<Y>", "fix N+1 at <line> with JOIN FETCH", "change <A> → <B>">',
            '  • First file:line to edit: <RESOLVE>']),
       '  • Invariants the change must preserve (from GROUNDED TARGETS / hard rules): <RESOLVE>',
       '',
@@ -463,6 +474,12 @@ function generatePrompt(task, options = {}) {
         '  • Install rule: missing skills from the MD require explicit user approval before install.',
         '',
       ] : []),
+      'Situational Context (fill from the repo — drives context_provision to 9–10):',
+      '  • Why it matters / business context: <RESOLVE — the user-facing or business consequence>',
+      '  • Related systems / dependencies the change touches: <RESOLVE>',
+      '  • Environment specifics (runtime, config, feature flags) if relevant: <RESOLVE — or n/a>',
+      '  • Which tests to verify against: <RESOLVE — the exact suite/file that proves this>',
+      '',
       'User Profile:',
       '  • Execution-first iterative delivery',
       '  • Strict type safety (TypeScript strict mode / Java strong types)',
@@ -684,6 +701,13 @@ function generatePrompt(task, options = {}) {
       ...(surface.isUi ? ['  • Provable by browser/device: screenshots + console + network on the resolved route, at the real breakpoints, when a dev server/emulator is up.'] : []),
       `  • Blocked-by: name the exact missing prerequisite — ${surface.isUi ? 'dev server, ' : ''}auth/credentials, running services, database, seed data, sandbox/network, or missing tooling.`,
       '',
+      'Verification rigor (treat every output as suspect until proven — this is the rubric\'s weak spot):',
+      '  • Read every diff line-by-line; do not approve unread changes.',
+      '  • Re-run the full suite (not just the touched test); confirm green, not merely "compiled".',
+      '  • Check for side-effects / regressions in related flows the change could have disturbed.',
+      '  • Validate every file:line reference the work claims — open it, confirm it says what was claimed.',
+      '  • Hunt silent failures: swallowed errors, empty catches, fallbacks that mask the real result.',
+      '',
       isReadOnly
         ? 'Verdict rule: do NOT output "Working"/"Secure"/"Fast"/"Ready" unless the matching proof above is attached. Missing proof → "Blocked" (with the blocker) or "Working with issues" — never an optimistic guess.'
         : 'Done rule: do NOT report the change "done"/"fixed"/"working" unless a regression test or command output proves the changed path — compiling is not proof. No proof → say so and report "Blocked" with the blocker.',
@@ -801,6 +825,10 @@ function generatePrompt(task, options = {}) {
     for (const w of contextDiet.warnings) {
       lines.push(`  ⚠ ${w}`)
     }
+    lines.push(`Quality rubric (dev-metrics): ${qualityRubric.covered}/${qualityRubric.total} dimensions covered`)
+    for (const g of qualityRubric.gaps) {
+      lines.push(`  ⚠ ${g}`)
+    }
     for (const s of report.sections) {
       lines.push(`  ${s.name}: ${s.used} used / ${s.allocated} allocated (${s.action})`)
     }
@@ -809,6 +837,11 @@ function generatePrompt(task, options = {}) {
 
   const promptText = lines.join('\n')
   const validation = validatePrompt(promptText)
+
+  // Self-assess the generated prompt against the dev-metrics session-quality rubric (the six
+  // dimensions the dashboard scores 1–10). Diagnostic, like context-diet: surfaces which
+  // dimensions still need filling so the SKILL can close the gap before handoff.
+  const qualityRubric = assessPromptQuality(promptText)
 
   return {
     prompt: promptText,
@@ -834,6 +867,12 @@ function generatePrompt(task, options = {}) {
         warnings: contextDiet.warnings,
       },
       installProfile: installProfile ? installProfile.label : null,
+      qualityRubric: {
+        covered: qualityRubric.covered,
+        total: qualityRubric.total,
+        weakest: qualityRubric.weakest,
+        gaps: qualityRubric.gaps,
+      },
       stackProfile: stackProfile ? {
         status: stackProfile.status,
         path: stackProfile.relativePath,

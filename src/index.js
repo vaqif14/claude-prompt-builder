@@ -20,6 +20,7 @@ const modelRouter = require('./model-router');
 const workflowRouter = require('./workflow-router');
 const contextDiet = require('./context-diet');
 const installProfiles = require('./install-profiles');
+const qualityRubric = require('./quality-rubric');
 
 module.exports = {
   generatePrompt,
@@ -60,4 +61,7 @@ module.exports = {
   installProfiles,
   getInstallProfile: installProfiles.getInstallProfile,
   listInstallProfiles: installProfiles.listInstallProfiles,
+  qualityRubric,
+  assessPromptQuality: qualityRubric.assessPromptQuality,
+  buildQualityBar: qualityRubric.buildQualityBar,
 };
